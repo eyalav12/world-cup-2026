@@ -36,7 +36,9 @@ public class StartUpHistoryDataLoader implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (historyMatchDataRepository.count() > 0) {
-            logger.info("History match data already loaded ({} rows), skipping import", historyMatchDataRepository.count());
+            logger.info("History match data already loaded ({} rows), skipping import",
+                    historyMatchDataRepository.count());
+            repairCorruptedHistoryScores();
             return;
         }
 
@@ -70,8 +72,24 @@ public class StartUpHistoryDataLoader implements CommandLineRunner {
 
             logger.info("History import finished ({} insert statements, {} rows in table)",
                     inserted, historyMatchDataRepository.count());
+            repairCorruptedHistoryScores();
         } catch (Exception e) {
             logger.error("Failed to import history match data from {}", HISTORY_SQL, e);
+        }
+    }
+
+    /** Fix scores like 4???1 → 4-1 from bad CSV/SQL encoding. */
+    private void repairCorruptedHistoryScores() {
+        try (Connection connection = dataSource.getConnection();
+             Statement statement = connection.createStatement()) {
+            int updated = statement.executeUpdate(
+                    "UPDATE history_match_data SET score = REPLACE(score, '???', '-') "
+                            + "WHERE score LIKE '%???%'");
+            if (updated > 0) {
+                logger.info("Repaired {} history score strings (??? → -)", updated);
+            }
+        } catch (Exception e) {
+            logger.warn("Could not repair history score strings", e);
         }
     }
 }

@@ -10,6 +10,7 @@ import com.world_cup.demo.util.apiUtils.OddsApiUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.world_cup.demo.util.apiUtils.FootballDataApiUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
@@ -27,6 +28,9 @@ public class OddsService {
     private MatchRepository matchRepository;
     private OddsCache oddsCache;
     private static final Logger logger = LoggerFactory.getLogger(OddsService.class);
+
+    @Value("${oddsdata.api.token:}")
+    private String oddsApiToken;
 
     public OddsService(OddsApiUtil oddsApiUtil,MatchRepository matchRepository,OddsCache oddsCache){
         this.oddsApiUtil = oddsApiUtil;
@@ -92,6 +96,12 @@ public class OddsService {
 
     @Scheduled(fixedRate = 1000 * 60 * 60 * 12) // Runs every 12 hours
     public void getFutureMatchesOddsAndFillCache() {
+        if (oddsApiToken == null || oddsApiToken.isBlank()) {
+            logger.warn(
+                    "ODDSDATA_API_TOKEN is not set — skipping odds sync. "
+                            + "Add the token to .env.prod and restart the server.");
+            return;
+        }
         try {
             logger.info("Starting background scheduler cron: Fetching World Cup odds from API...");
             String apiResponse = oddsApiUtil.httpCallToApi();

@@ -180,7 +180,11 @@ public class HistoryMatchData {
     }
 
     public String getScore() {
-        return score;
+        if (score == null) {
+            return null;
+        }
+        // SQL export corrupted en-dash separators as ???
+        return score.replace("???", "-");
     }
 
     public void setScore(String score) {
