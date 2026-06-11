@@ -1,0 +1,35 @@
+version: "3.18"
+services:
+  postgres:
+    image: 'postgres'
+    restart: always
+    ports:
+      - '2000:5432'
+    volumes:
+      - data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER : 'eyal'
+      POSTGRES_PASSWORD : 'postgres'
+
+
+  redis:
+    image: 'redis'
+    restart: always
+    ports:
+      - '6379:6379'
+  rabbit-mq:
+    image: 'rabbitmq:3.10.5-management'
+    restart: always
+    ports:
+      - '15672:15672'
+      - '5672:5672'
+    tty: true
+    stdin_open: true
+
+  redis-insight:
+    image: 'redis/redisinsight:latest'
+    ports:
+      - '5540:5540'
+
+volumes:
+  data:

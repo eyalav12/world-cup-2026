@@ -1,0 +1,48 @@
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Env & local secrets (never commit real keys/passwords)
+.env
+.env.local
+.env.*.local
+**/.env
+!**/.env.example
+
+# Next.js (world-cup-web)
+world-cup-web/node_modules/
+world-cup-web/.next/
+world-cup-web/out/
+world-cup-web/build/
+world-cup-web/.vercel/
+
+# Spring Boot (world-cup-server)
+world-cup-server/target/
+world-cup-server/**/target/
+world-cup-server/**/${project.build.directory}/
+world-cup-server/.apt_generated
+world-cup-server/.classpath
+world-cup-server/.project
+world-cup-server/.settings/
+
+# Local Spring overrides (real DB + API keys)
+world-cup-server/src/main/resources/application-local.properties
+
+# Python (world-cup-agents)
+world-cup-agents/.venv/
+world-cup-agents/venv/
+world-cup-agents/**/__pycache__/
+world-cup-agents/**/*.pyc
+world-cup-agents/.pytest_cache/
+world-cup-agents/.mypy_cache/
+
+# Logs & caches
+*.log
+npm-debug.log*
+yarn-debug.log*
+.pnpm-debug.log*

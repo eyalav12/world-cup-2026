@@ -1,0 +1,136 @@
+import Link from "next/link";
+import { OddsPanel } from "@/components/odds/odds-panel";
+import { TournamentWinnerPanel } from "@/components/predictions/tournament-winner-panel";
+import { TopScorerPanel } from "@/components/predictions/top-scorer-panel";
+import { TeamCrest } from "@/components/teams/team-crest";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { getOddsSummary, getTopScorerOdds, getTournamentWinnerOdds } from "@/lib/api/endpoints";
+import { ApiError } from "@/lib/api/client";
+import { fetchUpcomingWindow, formatMatchDateTime } from "@/lib/matches";
+
+export const metadata = { title: "Odds" };
+
+export default async function OddsPage() {
+  let winnerOdds: Awaited<ReturnType<typeof getTournamentWinnerOdds>> = null;
+  let topScorerOdds: Awaited<ReturnType<typeof getTopScorerOdds>> = null;
+  let winnerError: string | null = null;
+
+  try {
+    [winnerOdds, topScorerOdds] = await Promise.all([
+      getTournamentWinnerOdds(),
+      getTopScorerOdds(),
+    ]);
+  } catch (e) {
+    winnerError =
+      e instanceof ApiError
+        ? e.message
+        : "Could not load prediction market odds.";
+  }
+
+  const upcoming = await fetchUpcomingWindow(7);
+  const featured = upcoming.slice(0, 6);
+
+  const oddsResults = await Promise.all(
+    featured.map(async (match) => {
+      try {
+        const odds = await getOddsSummary(match.matchId);
+        return { match, odds, error: null as string | null };
+      } catch (e) {
+        return {
+          match,
+          odds: {},
+          error: e instanceof Error ? e.message : "Failed to load odds",
+        };
+      }
+    }),
+  );
+
+  const hasAny = oddsResults.some(
+    (r) =>
+      (r.odds.topSportsbooks?.length ?? 0) > 0 || r.odds.marketAverage,
+  );
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <h1 className="text-3xl font-bold text-white">Odds</h1>
+      <p className="mt-2 text-emerald-100/70">
+        Tournament prediction markets and bookmaker lines for upcoming fixtures.{" "}
+        <Link href="/markets" className="text-emerald-400 hover:text-emerald-300">
+          Browse all markets →
+        </Link>
+      </p>
+
+      {winnerError ? (
+        <div className="mt-6">
+          <ErrorBanner message={winnerError} />
+        </div>
+      ) : null}
+
+      <section className="mt-10">
+        <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-amber-200/80">
+          Prediction markets
+        </h2>
+        <TournamentWinnerPanel data={winnerOdds} />
+        <div className="mt-8">
+          <TopScorerPanel data={topScorerOdds} />
+        </div>
+      </section>
+
+      <section className="mt-14">
+        <h2 className="mb-6 text-sm font-medium uppercase tracking-wider text-emerald-200/80">
+          Match odds
+        </h2>
+        <p className="mb-6 text-sm text-emerald-100/60">
+          Home, draw, and away lines from sportsbooks for upcoming fixtures.
+        </p>
+
+        {featured.length === 0 ? (
+          <EmptyState title="No upcoming matches to show odds for" />
+        ) : null}
+
+        {!hasAny && featured.length > 0 ? (
+          <div className="mb-6">
+            <ErrorBanner message="Odds aren't available for these matches yet. They'll appear closer to kickoff." />
+          </div>
+        ) : null}
+
+        <div className="space-y-12">
+          {oddsResults.map(({ match, odds, error }) => (
+            <section
+              key={match.matchId}
+              className="rounded-3xl border border-white/10 bg-white/[0.03] p-6"
+            >
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <TeamCrest teamName={match.homeTeam} size={36} />
+                  <span className="font-semibold text-white">{match.homeTeam}</span>
+                  <span className="text-emerald-100/50">vs</span>
+                  <span className="font-semibold text-white">{match.awayTeam}</span>
+                  <TeamCrest teamName={match.awayTeam} size={36} />
+                </div>
+                <div className="text-right text-sm">
+                  <p className="text-emerald-100/60">
+                    {formatMatchDateTime(match)}
+                  </p>
+                  <Link
+                    href={`/matches/${match.matchId}`}
+                    className="text-emerald-400 hover:text-emerald-300"
+                  >
+                    Match details →
+                  </Link>
+                </div>
+              </div>
+              {error ? <ErrorBanner message={error} /> : null}
+              <OddsPanel
+                odds={odds}
+                homeTeam={match.homeTeam}
+                awayTeam={match.awayTeam}
+              />
+            </section>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}

@@ -1,0 +1,16 @@
+# Copy to application-local.properties and fill in your values.
+# application-local.properties is gitignored — never commit it.
+
+# Your local Postgres
+spring.datasource.url=jdbc:postgresql://localhost:5432/worldcup
+spring.datasource.username=postgres
+spring.datasource.password=your_db_password
+
+# API tokens (get your own from each provider)
+footballdata.api.token=your_football_data_api_token
+oddsdata.api.token=your_odds_api_token
+newsdata.api.token=your_news_api_token
+
+# Optional overrides
+# spring.data.redis.host=localhost
+# server.port=8083
