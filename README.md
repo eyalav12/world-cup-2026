@@ -2,6 +2,10 @@
 
 A full-stack FIFA World Cup 2026 hub — fixtures, teams, standings, news, odds, and an AI assistant that answers in natural language by combining live tournament data.
 
+## Live site
+
+http://165.232.81.63:3000/
+
 ## What it does
 
 **Matches & tournament**
