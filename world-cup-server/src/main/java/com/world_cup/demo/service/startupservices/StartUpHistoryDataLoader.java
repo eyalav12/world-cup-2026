@@ -6,11 +6,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.sql.Statement;
 
 @Component
 @Order(1)
@@ -43,10 +46,30 @@ public class StartUpHistoryDataLoader implements CommandLineRunner {
             return;
         }
 
-        try (Connection connection = dataSource.getConnection()) {
+        try (Connection connection = dataSource.getConnection();
+             BufferedReader reader = new BufferedReader(
+                     new InputStreamReader(script.getInputStream(), StandardCharsets.UTF_8));
+             Statement statement = connection.createStatement()) {
+
             logger.info("Importing World Cup history from {} …", HISTORY_SQL);
-            ScriptUtils.executeSqlScript(connection, script);
-            logger.info("History import finished ({} rows)", historyMatchDataRepository.count());
+            int inserted = 0;
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String sql = line.trim();
+                if (!sql.startsWith("INSERT INTO")) {
+                    continue;
+                }
+                statement.execute(sql);
+                inserted++;
+            }
+
+            statement.execute(
+                    "SELECT setval(pg_get_serial_sequence('history_match_data', 'id'), "
+                            + "COALESCE((SELECT MAX(id) FROM history_match_data), 1))"
+            );
+
+            logger.info("History import finished ({} insert statements, {} rows in table)",
+                    inserted, historyMatchDataRepository.count());
         } catch (Exception e) {
             logger.error("Failed to import history match data from {}", HISTORY_SQL, e);
         }

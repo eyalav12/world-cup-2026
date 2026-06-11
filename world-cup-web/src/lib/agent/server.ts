@@ -87,8 +87,9 @@ export async function invokeAgentChat(
   if (!res.ok) {
     let message = raw || res.statusText;
     try {
-      const err = JSON.parse(raw) as { detail?: string; message?: string };
-      if (err.detail) message = String(err.detail);
+      const err = JSON.parse(raw) as { detail?: string | unknown; message?: string };
+      if (typeof err.detail === "string") message = err.detail;
+      else if (Array.isArray(err.detail)) message = JSON.stringify(err.detail);
       else if (err.message) message = err.message;
     } catch {
       /* use raw */

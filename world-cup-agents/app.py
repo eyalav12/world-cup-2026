@@ -1,4 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+import logging
+import os
+import traceback
 
 from pydantic import BaseModel
 
@@ -15,6 +18,15 @@ from graph.graph_v2 import get_thread_messages, invoke_graph, serialize_messages
 
 
 app = FastAPI()
+logger = logging.getLogger(__name__)
+
+
+def _require_openai_key() -> None:
+    if not os.getenv("OPENAI_API_KEY", "").strip():
+        raise HTTPException(
+            status_code=503,
+            detail="OPENAI_API_KEY is not set on the agent service",
+        )
 
 
 class AgentQuery(BaseModel):
@@ -31,11 +43,15 @@ def _chat_response(result: dict) -> dict:
 
 @app.post("/agent/chat")
 def run_agent(payload: AgentQuery):
-    result = invoke_graph(payload.user_prompt, thread_id=payload.thread_id)
-
-    print(result)
-
-    return _chat_response(result)
+    _require_openai_key()
+    try:
+        result = invoke_graph(payload.user_prompt, thread_id=payload.thread_id)
+        return _chat_response(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Agent chat failed for thread %s", payload.thread_id)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/agent/chat/{thread_id}/messages")

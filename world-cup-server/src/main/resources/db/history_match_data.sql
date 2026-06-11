@@ -1,27 +1,4 @@
---
--- PostgreSQL database dump
---
-
--- Dumped from database version 17.4 (Debian 17.4-1.pgdg120+2)
--- Dumped by pg_dump version 17.4 (Debian 17.4-1.pgdg120+2)
-
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
-
---
--- Data for Name: history_match_data; Type: TABLE DATA; Schema: public; Owner: -
---
-
-INSERT INTO public.history_match_data VALUES (1, 'MEX', 'Mexico', '1', '-3', '0', '0', 'Montevideo', 'Uruguay', '0', '0', 'Group 1', '1', 'FRA', 'France', '4', '3', '0', '1', '0', '1930-07-13', 'M-1930-01', 'France v Mexico', '0', 'home team win', '4???1', '0-0', 'S-193', 'Estadio Pocitos', 'group stage', 'WC-1930', '1930 FIFA World Cup');
+﻿INSERT INTO public.history_match_data VALUES (1, 'MEX', 'Mexico', '1', '-3', '0', '0', 'Montevideo', 'Uruguay', '0', '0', 'Group 1', '1', 'FRA', 'France', '4', '3', '0', '1', '0', '1930-07-13', 'M-1930-01', 'France v Mexico', '0', 'home team win', '4???1', '0-0', 'S-193', 'Estadio Pocitos', 'group stage', 'WC-1930', '1930 FIFA World Cup');
 INSERT INTO public.history_match_data VALUES (2, 'BEL', 'Belgium', '0', '-3', '0', '0', 'Montevideo', 'Uruguay', '0', '0', 'Group 4', '1', 'USA', 'United States', '3', '3', '0', '1', '0', '1930-07-13', 'M-1930-02', 'United States v Belgium', '0', 'home team win', '3???0', '0-0', 'S-192', 'Estadio Gran Parque Central', 'group stage', 'WC-1930', '1930 FIFA World Cup');
 INSERT INTO public.history_match_data VALUES (3, 'BRA', 'Brazil', '1', '-1', '0', '0', 'Montevideo', 'Uruguay', '0', '0', 'Group 2', '1', 'YUG', 'Yugoslavia', '2', '1', '0', '1', '0', '1930-07-14', 'M-1930-03', 'Yugoslavia v Brazil', '0', 'home team win', '2???1', '0-0', 'S-192', 'Estadio Gran Parque Central', 'group stage', 'WC-1930', '1930 FIFA World Cup');
 INSERT INTO public.history_match_data VALUES (4, 'PER', 'Peru', '1', '-2', '0', '0', 'Montevideo', 'Uruguay', '0', '0', 'Group 3', '1', 'ROU', 'Romania', '3', '2', '0', '1', '0', '1930-07-14', 'M-1930-04', 'Romania v Peru', '0', 'home team win', '3???1', '0-0', 'S-193', 'Estadio Pocitos', 'group stage', 'WC-1930', '1930 FIFA World Cup');
@@ -985,9 +962,3 @@ INSERT INTO public.history_match_data VALUES (961, 'HRV', 'Croatia', '0', '-3', 
 INSERT INTO public.history_match_data VALUES (962, 'MAR', 'Morocco', '0', '-2', '0', '0', 'Al Khor', 'Qatar', '0', '0', 'not applicable', '0', 'FRA', 'France', '2', '2', '0', '1', '1', '2022-12-14', 'M-2022-62', 'France v Morocco', '0', 'home team win', '2???0', '0-0', 'S-107', 'Al Bayt Stadium', 'semi-finals', 'WC-2022', '2022 FIFA World Cup');
 INSERT INTO public.history_match_data VALUES (963, 'MAR', 'Morocco', '1', '-1', '0', '0', 'Al Rayyan', 'Qatar', '0', '0', 'not applicable', '0', 'HRV', 'Croatia', '2', '1', '0', '1', '1', '2022-12-17', 'M-2022-63', 'Croatia v Morocco', '0', 'home team win', '2???1', '0-0', 'S-110', 'Khalifa International Stadium', 'third-place match', 'WC-2022', '2022 FIFA World Cup');
 INSERT INTO public.history_match_data VALUES (964, 'FRA', 'France', '3', '0', '2', '0', 'Lusail', 'Qatar', '0', '1', 'not applicable', '0', 'ARG', 'Argentina', '3', '0', '4', '1', '1', '2022-12-18', 'M-2022-64', 'Argentina v France', '1', 'home team win', '3???3', '4???2', 'S-114', 'Lusail Stadium', 'final', 'WC-2022', '2022 FIFA World Cup');
-
-
---
--- PostgreSQL database dump complete
---
-
