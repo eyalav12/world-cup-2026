@@ -2,9 +2,11 @@ package com.world_cup.demo.service.startupservices;
 
 import com.world_cup.demo.service.CsvLoaderService;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(2)
 public class StartUpFileLoaderCommandRunner implements CommandLineRunner {
     private CsvLoaderService csvLoaderService;
 
