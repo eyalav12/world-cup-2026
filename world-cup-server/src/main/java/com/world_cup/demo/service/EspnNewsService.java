@@ -105,7 +105,7 @@ public class EspnNewsService {
     }
 
     @Async
-    @Scheduled(fixedRate = 1000 * 60 * 60 * 12)
+    @Scheduled(fixedRate = 1000 * 60 * 60 )
     public void getTeamsNewsAndFillCache() {
         try {
             logger.info("Starting background scheduler cron: Fetching World Cup all teams news from ESPN...");

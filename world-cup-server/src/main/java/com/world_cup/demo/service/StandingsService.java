@@ -52,7 +52,7 @@ public class StandingsService {
 
 
     @Async
-    @Scheduled(fixedRate = 60 * 1000 * 60 * 6)
+    @Scheduled(fixedRate = 60 * 1000 * 60 * 3)
     public void fetchStandingFromApiAndSaveToDB() {
         try {
             String apiResponse = footballDataClient.fetchStandings();

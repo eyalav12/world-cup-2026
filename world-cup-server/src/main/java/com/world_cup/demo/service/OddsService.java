@@ -94,7 +94,7 @@ public class OddsService {
     }
 
 
-    @Scheduled(fixedRate = 1000 * 60 * 60 * 12) // Runs every 12 hours
+    @Scheduled(fixedRate = 1000 * 60 * 60 * 4) // Runs every 12 hours
     public void getFutureMatchesOddsAndFillCache() {
         if (oddsApiToken == null || oddsApiToken.isBlank()) {
             logger.warn(

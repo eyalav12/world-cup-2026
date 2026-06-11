@@ -63,7 +63,7 @@ public class LineupService {
         return lineups == null ? null : LineupMapper.toSummary(lineups);
     }
 
-    @Scheduled(fixedRate = 1000 * 60 * 30)
+    @Scheduled(fixedRate = 1000 * 60 * 20)
     public void syncUpcomingMatchLineups() {
         try {
             logger.info("Starting background scheduler cron: Fetching upcoming match lineups from football-data...");
