@@ -1,17 +1,10 @@
 import { addDays, format, isSameDay, parseISO } from "date-fns";
 import type { MatchDto } from "./api/types";
+import { matchCalendarDayKey } from "./match-time";
 import { getMatchWindowStart } from "./tournament";
 
 export function parseMatchDate(match: MatchDto): Date {
   return parseISO(match.matchDate);
-}
-
-export function formatMatchDateTime(match: MatchDto): string {
-  try {
-    return format(parseMatchDate(match), "EEE, MMM d · HH:mm");
-  } catch {
-    return match.matchDate;
-  }
 }
 
 export function formatMatchDateShort(match: MatchDto): string {
@@ -51,12 +44,15 @@ export function sortMatchesChronologically(matches: MatchDto[]): MatchDto[] {
   );
 }
 
-export function groupMatchesByDay(matches: MatchDto[]): Map<string, MatchDto[]> {
+export function groupMatchesByDay(
+  matches: MatchDto[],
+  timeZone: string,
+): Map<string, MatchDto[]> {
   const sorted = sortMatchesChronologically(matches);
   const map = new Map<string, MatchDto[]>();
 
   for (const match of sorted) {
-    const key = format(parseMatchDate(match), "yyyy-MM-dd");
+    const key = matchCalendarDayKey(match.matchDate, timeZone);
     const list = map.get(key) ?? [];
     list.push(match);
     map.set(key, list);

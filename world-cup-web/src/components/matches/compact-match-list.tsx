@@ -1,7 +1,7 @@
+import { MatchKickoffTime } from "@/components/matches/match-kickoff-time";
 import Link from "next/link";
 import type { MatchDto } from "@/lib/api/types";
 import { TeamCrest } from "@/components/teams/team-crest";
-import { formatMatchDateTime } from "@/lib/matches";
 
 type Props = {
   matches: MatchDto[];
@@ -33,7 +33,7 @@ export function CompactMatchList({
               <TeamCrest teamName={m.awayTeam} size={24} />
             </div>
             <div className="shrink-0 text-right text-xs text-emerald-100/50">
-              <div>{formatMatchDateTime(m)}</div>
+              <MatchKickoffTime match={m} />
               {m.competition ? (
                 <div className="truncate max-w-[10rem]">{m.competition}</div>
               ) : null}

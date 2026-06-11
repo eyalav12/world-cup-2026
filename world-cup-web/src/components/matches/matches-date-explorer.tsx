@@ -5,6 +5,7 @@ import { useState } from "react";
 import { MatchCard } from "@/components/matches/match-card";
 import { toUserMessage } from "@/lib/api/client";
 import { getMatchesByDate } from "@/lib/api/endpoints";
+import { getBrowserTimeZone } from "@/lib/match-time";
 import { groupMatchesByDay } from "@/lib/matches";
 import {
   getDefaultMatchPickerDate,
@@ -21,7 +22,7 @@ export function MatchesDateExplorer() {
     queryFn: () => getMatchesByDate(new Date(`${date}T12:00:00`)),
   });
 
-  const grouped = data ? groupMatchesByDay(data) : new Map();
+  const grouped = data ? groupMatchesByDay(data, getBrowserTimeZone()) : new Map();
 
   return (
     <div>

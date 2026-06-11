@@ -7,7 +7,8 @@ import { ErrorBanner } from "@/components/ui/error-banner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getOddsSummary, getTopScorerOdds, getTournamentWinnerOdds } from "@/lib/api/endpoints";
 import { toUserMessage } from "@/lib/api/client";
-import { fetchUpcomingWindow, formatMatchDateTime } from "@/lib/matches";
+import { MatchKickoffTime } from "@/components/matches/match-kickoff-time";
+import { fetchUpcomingWindow } from "@/lib/matches";
 
 export const metadata = { title: "Odds" };
 
@@ -107,9 +108,10 @@ export default async function OddsPage() {
                   <TeamCrest teamName={match.awayTeam} size={36} />
                 </div>
                 <div className="text-right text-sm">
-                  <p className="text-emerald-100/60">
-                    {formatMatchDateTime(match)}
-                  </p>
+                  <MatchKickoffTime
+                    match={match}
+                    className="text-emerald-100/60"
+                  />
                   <Link
                     href={`/matches/${match.matchId}`}
                     className="text-emerald-400 hover:text-emerald-300"
