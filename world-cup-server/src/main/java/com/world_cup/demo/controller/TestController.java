@@ -5,7 +5,6 @@ import com.world_cup.demo.entities.Bet;
 import com.world_cup.demo.entities.Person;
 import com.world_cup.demo.entities.User;
 import com.world_cup.demo.repositories.UserRepository;
-import com.world_cup.demo.scheduledTask.SchedulesTaskEndedGames;
 import com.world_cup.demo.service.TestService;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,7 +48,6 @@ public class TestController {
     @PostMapping("/addMap")
     public Object addPersonRaw(@RequestBody Map<String, Object> body) {
         System.out.println("Received raw body as Map: " + body);
-        SchedulesTaskEndedGames.httpCallToApi("","");
         return body;
     }
 
