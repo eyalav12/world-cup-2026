@@ -1,0 +1,82 @@
+# Production (VPS): docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# Open http://YOUR_DROPLET_IP:3000  (add HTTPS on :80/:443 later)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: worldcup
+      POSTGRES_USER: ${DB_USERNAME:-worldcup}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-worldcup} -d worldcup"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+
+  server:
+    build: ./world-cup-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/worldcup
+      DB_USERNAME: ${DB_USERNAME:-worldcup}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      SERVER_PORT: 8083
+      FOOTBALLDATA_API_TOKEN: ${FOOTBALLDATA_API_TOKEN:-}
+      ODDSDATA_API_TOKEN: ${ODDSDATA_API_TOKEN:-}
+      NEWSDATA_API_TOKEN: ${NEWSDATA_API_TOKEN:-}
+
+  agents:
+    build: ./world-cup-agents
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      BACKEND_API_URL: http://server:8083
+
+  web:
+    build:
+      context: ./world-cup-web
+      args:
+        API_BASE_URL: http://server:8083
+        AGENT_API_URL: http://agents:8000
+    restart: unless-stopped
+    depends_on:
+      - server
+      - agents
+    environment:
+      API_BASE_URL: http://server:8083
+      AGENT_API_URL: http://agents:8000
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

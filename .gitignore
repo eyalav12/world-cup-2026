@@ -12,9 +12,11 @@ Thumbs.db
 .env.local
 .env.*.local
 .env.docker
+.env.prod
 **/.env
 !**/.env.example
 !**/.env.docker.example
+!**/.env.prod.example
 
 # Next.js (world-cup-web)
 world-cup-web/node_modules/
