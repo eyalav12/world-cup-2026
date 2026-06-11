@@ -75,8 +75,9 @@ export function getMatchLineups(matchId: number) {
   );
 }
 
+/** Returns null when odds are not cached yet (backend 204). */
 export function getOddsSummary(matchId: number) {
-  return apiFetch<OddsSummaryDTO>(
+  return fetchNullable<OddsSummaryDTO>(
     `/odds/oddsSummaryByMatchId?matchId=${matchId}`,
   );
 }

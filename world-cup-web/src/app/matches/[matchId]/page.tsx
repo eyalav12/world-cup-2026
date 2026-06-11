@@ -39,19 +39,43 @@ export default async function MatchDetailPage({ params }: Props) {
   const match = await findMatchById(matchId);
   if (!match) notFound();
 
-  let odds = null;
+  let odds: Awaited<ReturnType<typeof getOddsSummary>> = null;
   let lineups: Awaited<ReturnType<typeof getMatchLineups>> = null;
   let h2h: Awaited<ReturnType<typeof getHeadToHead>> = [];
   let oddsError: string | null = null;
+  let detailsError: string | null = null;
 
-  try {
-    [odds, lineups, h2h] = await Promise.all([
-      getOddsSummary(matchId),
-      getMatchLineups(matchId),
-      getHeadToHead(match.homeTeam, match.awayTeam),
-    ]);
-  } catch (e) {
-    oddsError = e instanceof Error ? e.message : "Could not load match details.";
+  const [oddsResult, lineupsResult, h2hResult] = await Promise.allSettled([
+    getOddsSummary(matchId),
+    getMatchLineups(matchId),
+    getHeadToHead(match.homeTeam, match.awayTeam),
+  ]);
+
+  if (oddsResult.status === "fulfilled") {
+    odds = oddsResult.value;
+  } else {
+    oddsError =
+      oddsResult.reason instanceof Error
+        ? oddsResult.reason.message
+        : "Could not load odds.";
+  }
+
+  if (lineupsResult.status === "fulfilled") {
+    lineups = lineupsResult.value;
+  } else {
+    detailsError =
+      lineupsResult.reason instanceof Error
+        ? lineupsResult.reason.message
+        : "Could not load lineups.";
+  }
+
+  if (h2hResult.status === "fulfilled") {
+    h2h = h2hResult.value;
+  } else if (!detailsError) {
+    detailsError =
+      h2hResult.reason instanceof Error
+        ? h2hResult.reason.message
+        : "Could not load head-to-head history.";
   }
 
   const live = isLiveMatch(match);
@@ -101,6 +125,12 @@ export default async function MatchDetailPage({ params }: Props) {
       {oddsError ? (
         <div className="mt-6">
           <ErrorBanner message={oddsError} />
+        </div>
+      ) : null}
+
+      {detailsError ? (
+        <div className="mt-6">
+          <ErrorBanner message={detailsError} />
         </div>
       ) : null}
 
