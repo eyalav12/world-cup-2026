@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { MatchCard } from "@/components/matches/match-card";
 import { TeamCrest } from "@/components/teams/team-crest";
 import { GroupsExplorer } from "@/components/groups/groups-explorer";
 import { ErrorBanner } from "@/components/ui/error-banner";

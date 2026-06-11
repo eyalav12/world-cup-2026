@@ -13,6 +13,7 @@ ARG API_BASE_URL=http://server:8083
 ARG AGENT_API_URL=http://agents:8000
 ENV API_BASE_URL=$API_BASE_URL
 ENV AGENT_API_URL=$AGENT_API_URL
+ENV NODE_OPTIONS=--max-old-space-size=2048
 
 RUN npm run build
 
