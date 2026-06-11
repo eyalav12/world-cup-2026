@@ -11,6 +11,7 @@ import {
   getMatchLineups,
   getOddsSummary,
 } from "@/lib/api/endpoints";
+import { toUserMessage } from "@/lib/api/client";
 import { MatchLineupsPanel } from "@/components/matches/match-lineups-panel";
 import { findMatchById } from "@/lib/match-lookup";
 import {
@@ -54,28 +55,22 @@ export default async function MatchDetailPage({ params }: Props) {
   if (oddsResult.status === "fulfilled") {
     odds = oddsResult.value;
   } else {
-    oddsError =
-      oddsResult.reason instanceof Error
-        ? oddsResult.reason.message
-        : "Could not load odds.";
+    oddsError = toUserMessage(oddsResult.reason, "Could not load odds.");
   }
 
   if (lineupsResult.status === "fulfilled") {
     lineups = lineupsResult.value;
   } else {
-    detailsError =
-      lineupsResult.reason instanceof Error
-        ? lineupsResult.reason.message
-        : "Could not load lineups.";
+    detailsError = toUserMessage(lineupsResult.reason, "Could not load lineups.");
   }
 
   if (h2hResult.status === "fulfilled") {
     h2h = h2hResult.value;
   } else if (!detailsError) {
-    detailsError =
-      h2hResult.reason instanceof Error
-        ? h2hResult.reason.message
-        : "Could not load head-to-head history.";
+    detailsError = toUserMessage(
+      h2hResult.reason,
+      "Could not load head-to-head history.",
+    );
   }
 
   const live = isLiveMatch(match);

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { toUserMessage } from "@/lib/api/client";
 import { ensureThreadId, invokeAgentChat } from "@/lib/agent/server";
 
 export type AgentFormState = {
@@ -25,9 +26,7 @@ export async function sendAgentMessage(
     const message =
       error instanceof Error && error.name === "TimeoutError"
         ? "Agent request timed out after 2 minutes. Try a simpler question."
-        : error instanceof Error
-          ? error.message
-          : "Failed to reach agent service";
+        : toUserMessage(error, "Failed to reach agent service");
     return { error: message };
   }
 }

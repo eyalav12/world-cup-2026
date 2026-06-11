@@ -3,7 +3,7 @@ import { NewsArticleCard } from "@/components/news/news-article-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { getGeneralNews } from "@/lib/api/endpoints";
-import { ApiError } from "@/lib/api/client";
+import { toUserMessage } from "@/lib/api/client";
 import type { NewsArticle } from "@/lib/api/types";
 
 export const metadata = { title: "News" };
@@ -21,10 +21,7 @@ export default async function NewsPage() {
       articles = news.articles ?? [];
     }
   } catch (e) {
-    apiError =
-      e instanceof ApiError
-        ? e.message
-        : "Could not load news right now. Please try again later.";
+    apiError = toUserMessage(e, "Could not load news right now. Please try again later.");
   }
 
   return (

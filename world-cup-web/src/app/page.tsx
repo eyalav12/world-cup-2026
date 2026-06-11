@@ -9,7 +9,7 @@ import {
   getTopScorerOdds,
   getTournamentWinnerOdds,
 } from "@/lib/api/endpoints";
-import { ApiError } from "@/lib/api/client";
+import { toUserMessage } from "@/lib/api/client";
 import { fetchUpcomingWindow } from "@/lib/matches";
 import { formatGroupId, sortGroupIds } from "@/lib/teams";
 
@@ -26,10 +26,10 @@ export default async function HomePage() {
       getTeamsByGroups(),
     ]);
   } catch (e) {
-    apiError =
-      e instanceof ApiError
-        ? e.message
-        : "We couldn't load tournament data right now. Please try again in a moment.";
+    apiError = toUserMessage(
+      e,
+      "We couldn't load tournament data right now. Please try again in a moment.",
+    );
   }
 
   try {

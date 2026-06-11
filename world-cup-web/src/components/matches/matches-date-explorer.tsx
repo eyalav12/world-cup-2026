@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { MatchCard } from "@/components/matches/match-card";
+import { toUserMessage } from "@/lib/api/client";
 import { getMatchesByDate } from "@/lib/api/endpoints";
 import { groupMatchesByDay } from "@/lib/matches";
 import {
@@ -39,11 +40,10 @@ export function MatchesDateExplorer() {
 
       {error ? (
         <ErrorBanner
-          message={
-            error instanceof Error
-              ? error.message
-              : "Failed to load matches for this date."
-          }
+          message={toUserMessage(
+            error,
+            "Failed to load matches for this date.",
+          )}
         />
       ) : null}
 

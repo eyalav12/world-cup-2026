@@ -2,7 +2,7 @@ import Link from "next/link";
 import { TeamCrest } from "@/components/teams/team-crest";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { getTeamsByGroups } from "@/lib/api/endpoints";
-import { ApiError } from "@/lib/api/client";
+import { toUserMessage } from "@/lib/api/client";
 import { formatGroupId, sortGroupIds } from "@/lib/teams";
 import { slugifyTeamName } from "@/lib/utils";
 
@@ -15,10 +15,7 @@ export default async function TeamsPage() {
   try {
     teamsByGroup = await getTeamsByGroups();
   } catch (e) {
-    error =
-      e instanceof ApiError
-        ? e.message
-        : "Could not load teams. Please try again later.";
+    error = toUserMessage(e, "Could not load teams. Please try again later.");
   }
 
   const groups = sortGroupIds(Object.keys(teamsByGroup));

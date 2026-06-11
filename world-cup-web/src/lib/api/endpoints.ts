@@ -1,6 +1,5 @@
 import { format } from "date-fns";
-import { getApiBaseUrl } from "./config";
-import { apiFetch, ApiError } from "./client";
+import { apiFetch, fetchNullable, fetchNullableOptional } from "./client";
 import type {
   CleanedTournamentOdds,
   GroupStandingRow,
@@ -60,19 +59,16 @@ export function getMatchesByGroupName(
 }
 
 export function getMatchByMatchId(matchId: number) {
-  return fetchNullable<MatchDto>(`/matches/byMatchId?matchId=${matchId}`, 120);
+  return fetchNullable<MatchDto>(`/matches/byMatchId?matchId=${matchId}`);
 }
 
 export function getRecentFinishedMatches(limit = 10) {
-  return fetchNullable<MatchDto[]>(`/matches/recent?limit=${limit}`, 120);
+  return fetchNullable<MatchDto[]>(`/matches/recent?limit=${limit}`);
 }
 
 /** Returns null when lineups are not published yet (backend 204). */
 export function getMatchLineups(matchId: number) {
-  return fetchNullable<MatchLineupsDto>(
-    `/matches/lineups?matchId=${matchId}`,
-    120,
-  );
+  return fetchNullable<MatchLineupsDto>(`/matches/lineups?matchId=${matchId}`);
 }
 
 /** Returns null when odds are not cached yet (backend 204). */
@@ -116,37 +112,10 @@ export function getGlobalLeaderboard(page = 0, size = 20) {
   );
 }
 
-/** Returns null when Redis cache is empty (backend 204). */
-async function fetchNullable<T>(path: string, revalidate = 300): Promise<T | null> {
-  const base = getApiBaseUrl();
-  const url = `${base}${path}`;
-
-  const res = await fetch(url, {
-    headers: { Accept: "application/json" },
-    next: { revalidate },
-  });
-
-  if (res.status === 204) return null;
-
-  if (!res.ok) {
-    let message = res.statusText;
-    try {
-      const body = (await res.json()) as { message?: string };
-      if (body.message) message = body.message;
-    } catch {
-      /* ignore */
-    }
-    throw new ApiError(message, res.status);
-  }
-
-  return res.json() as Promise<T>;
-}
-
 export function getGroupWinnerOdds(groupId: string) {
   const groupName = toPolymarketGroupKey(groupId);
   return fetchNullable<CleanedTournamentOdds>(
     `/polymarketodds/groupWinnerOdds?groupName=${encodeURIComponent(groupName)}`,
-    900,
   );
 }
 
@@ -154,13 +123,12 @@ export function getGroupWinnerOdds(groupId: string) {
 export function getAdvancementOdds(stage: string) {
   return fetchNullable<CleanedTournamentOdds>(
     `/polymarketodds/advancementOdds?stage=${encodeURIComponent(stage)}`,
-    900,
   );
 }
 
 /** All group tables (flat list). Empty array if none synced yet. */
 export async function getAllStandings(): Promise<GroupStandingRow[]> {
-  const data = await fetchNullable<GroupStandingRow[]>("/standings/all", 120);
+  const data = await fetchNullable<GroupStandingRow[]>("/standings/all");
   return data ?? [];
 }
 
@@ -168,7 +136,6 @@ export async function getAllStandings(): Promise<GroupStandingRow[]> {
 export async function getStandingsByGroup(groupId: string): Promise<GroupStandingRow[]> {
   const data = await fetchNullable<GroupStandingRow[]>(
     `/standings/byGroup?group=${encodeURIComponent(groupId)}`,
-    120,
   );
   return data ?? [];
 }
@@ -181,52 +148,19 @@ export function toPolymarketGroupKey(groupId: string): string {
 export function getTournamentWinnerOdds() {
   return fetchNullable<CleanedTournamentOdds>(
     "/polymarketodds/tournamentWinnerOdds",
-    900,
   );
 }
 
 /** Returns null when Redis cache is empty (backend 204). */
 export function getTopScorerOdds() {
-  return fetchNullable<CleanedTournamentOdds>(
-    "/polymarketodds/topScorerOdds",
-    900,
-  );
+  return fetchNullable<CleanedTournamentOdds>("/polymarketodds/topScorerOdds");
 }
 
 /** Returns null when cache empty or endpoint not deployed yet. */
 export function getTeamPolymarketProps(teamName: string) {
   return fetchNullableOptional<CleanedTournamentOdds>(
     `/polymarketodds/team?teamName=${encodeURIComponent(teamName)}`,
-    900,
   );
-}
-
-async function fetchNullableOptional<T>(
-  path: string,
-  revalidate = 300,
-): Promise<T | null> {
-  const base = getApiBaseUrl();
-  const url = `${base}${path}`;
-
-  const res = await fetch(url, {
-    headers: { Accept: "application/json" },
-    next: { revalidate },
-  });
-
-  if (res.status === 204 || res.status === 404) return null;
-
-  if (!res.ok) {
-    let message = res.statusText;
-    try {
-      const body = (await res.json()) as { message?: string };
-      if (body.message) message = body.message;
-    } catch {
-      /* ignore */
-    }
-    throw new ApiError(message, res.status);
-  }
-
-  return res.json() as Promise<T>;
 }
 
 /** Returns null when Redis cache is empty (backend 204). */

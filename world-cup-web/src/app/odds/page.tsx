@@ -6,7 +6,7 @@ import { TeamCrest } from "@/components/teams/team-crest";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getOddsSummary, getTopScorerOdds, getTournamentWinnerOdds } from "@/lib/api/endpoints";
-import { ApiError } from "@/lib/api/client";
+import { toUserMessage } from "@/lib/api/client";
 import { fetchUpcomingWindow, formatMatchDateTime } from "@/lib/matches";
 
 export const metadata = { title: "Odds" };
@@ -22,10 +22,7 @@ export default async function OddsPage() {
       getTopScorerOdds(),
     ]);
   } catch (e) {
-    winnerError =
-      e instanceof ApiError
-        ? e.message
-        : "Could not load prediction market odds.";
+    winnerError = toUserMessage(e, "Could not load prediction market odds.");
   }
 
   const upcoming = await fetchUpcomingWindow(7);
@@ -35,12 +32,12 @@ export default async function OddsPage() {
     featured.map(async (match) => {
       try {
         const odds = await getOddsSummary(match.matchId);
-        return { match, odds, error: null as string | null };
+        return { match, odds: odds ?? {}, error: null as string | null };
       } catch (e) {
         return {
           match,
           odds: {},
-          error: e instanceof Error ? e.message : "Failed to load odds",
+          error: toUserMessage(e, "Failed to load odds for this match."),
         };
       }
     }),

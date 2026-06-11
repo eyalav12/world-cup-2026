@@ -29,15 +29,36 @@ export default async function TeamDetailPage({ params }: Props) {
   const teamName = teamNameFromSlug((await params).teamSlug);
   if (!teamName) notFound();
 
-  const [squad, upcoming, history, apiRecent, tournamentResults, teamProps] =
-    await Promise.all([
-      getTeamSquad(teamName),
-      getMatchesByTeamName(teamName),
-      getTeamLastMatches(teamName),
-      getTeamLastMatchesFromApi(teamName, 5).catch(() => []),
-      getTeamTournamentResults(teamName, 6).catch(() => []),
-      getTeamPolymarketProps(teamName),
-    ]);
+  const [
+    squadResult,
+    upcomingResult,
+    historyResult,
+    apiRecentResult,
+    tournamentResultsResult,
+    teamPropsResult,
+  ] = await Promise.allSettled([
+    getTeamSquad(teamName),
+    getMatchesByTeamName(teamName),
+    getTeamLastMatches(teamName),
+    getTeamLastMatchesFromApi(teamName, 5),
+    getTeamTournamentResults(teamName, 6),
+    getTeamPolymarketProps(teamName),
+  ]);
+
+  const squad =
+    squadResult.status === "fulfilled" ? squadResult.value : [];
+  const upcoming =
+    upcomingResult.status === "fulfilled" ? upcomingResult.value : [];
+  const history =
+    historyResult.status === "fulfilled" ? historyResult.value : [];
+  const apiRecent =
+    apiRecentResult.status === "fulfilled" ? apiRecentResult.value : [];
+  const tournamentResults =
+    tournamentResultsResult.status === "fulfilled"
+      ? tournamentResultsResult.value
+      : [];
+  const teamProps =
+    teamPropsResult.status === "fulfilled" ? teamPropsResult.value : null;
 
   if (squad.length === 0 && upcoming.length === 0 && history.length === 0) {
     notFound();
