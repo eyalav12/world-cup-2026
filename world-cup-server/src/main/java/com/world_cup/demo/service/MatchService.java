@@ -43,6 +43,11 @@ public class MatchService {
 
     @Scheduled(fixedRate = 1000*60*60*3)
     public void getFutureMatchesAndFillDB(){
+        syncUpcomingMatchesFromApi();
+    }
+
+    /** Loads TIMED matches for the next 14 days from Football Data API into Postgres. */
+    public void syncUpcomingMatchesFromApi() {
         LocalDate fromDate = LocalDate.now();
         if(fromDate.isBefore(TOURNAMENT_START_DATE)){
             fromDate = TOURNAMENT_START_DATE;

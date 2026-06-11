@@ -110,7 +110,9 @@ public class OddsService {
             List<OddsSummaryDTO> processedSummaries = processAndPrepareOddsData(apiResponse);
 
             if (processedSummaries.isEmpty()) {
-                logger.warn("Odds API run complete, but zero matches were successfully mapped against the database.");
+                logger.warn(
+                        "Odds API run complete, but zero matches were mapped to the database. "
+                                + "Ensure matches are synced (Football Data API) and team names/dates align.");
                 return;
             }
 
@@ -199,17 +201,13 @@ public class OddsService {
 
         try {
             List<Map> fullMatchesOddsList = objectMapper.readValue(apiResponse, List.class);
+            int apiEventCount = fullMatchesOddsList.size();
 
             for (Map oddsMatchMap : fullMatchesOddsList) {
                 String uuid = (String) oddsMatchMap.get("id");
                 String homeTeam = (String) oddsMatchMap.get("home_team");
                 String awayTeam = (String) oddsMatchMap.get("away_team");
                 String time = (String) oddsMatchMap.get("commence_time");
-
-                // Clean up time string if it contains a 'Z' zone identifier to match database patterns
-                if (time.contains("T")) {
-                    time = time.replace("T", " ").replace("Z", "");
-                }
 
                 Integer matchIdFromDb = findDbMatchIdByOddsApiId(uuid, homeTeam, awayTeam, time);
                 if (matchIdFromDb == null || matchIdFromDb == -1) continue;
@@ -302,6 +300,8 @@ public class OddsService {
                 generatedSummaries.add(fullSummary);
             }
 
+            logger.info("Odds mapping: {} API events → {} cached match summaries", apiEventCount, generatedSummaries.size());
+
         } catch (Exception e) {
             logger.error("Error processing odds structures ", e);
         }
@@ -330,25 +330,40 @@ public class OddsService {
 
 
 
-    private Integer findDbMatchIdByOddsApiId(String oddsApiId, String homeTeam, String awayTeam,String date){
-        try{
+    private Integer findDbMatchIdByOddsApiId(String oddsApiId, String homeTeam, String awayTeam, String commenceTime) {
+        try {
             Match matchByOddsApiId = matchRepository.findMatchByOddsApiId(oddsApiId);
-            if(matchByOddsApiId == null){
-                Integer matchId = matchRepository.findMatchByCombinationOfTeamsAndDate(homeTeam, awayTeam, date);
-                if(matchId != null){
-                    matchRepository.updateMatchWithOddsApiId(matchId,oddsApiId);
-                    return matchId;
-                }
-                else{
-                    return -1;
-                }
+            if (matchByOddsApiId != null) {
+                return matchByOddsApiId.getMatchId();
             }
-            return matchByOddsApiId.getMatchId();
 
-        }
-        catch(Exception e){
-            logger.error("failed to find match in db ",e);
+            String matchDate = toDateOnly(commenceTime);
+            if (matchDate == null) {
+                return -1;
+            }
+
+            Match match = matchRepository.findMatchByTeamNamesAndDate(homeTeam, awayTeam, matchDate);
+            if (match != null) {
+                matchRepository.updateMatchWithOddsApiId(match.getMatchId(), oddsApiId);
+                return match.getMatchId();
+            }
+
+            logger.debug("No DB match for odds event {} vs {} on {}", homeTeam, awayTeam, matchDate);
+            return -1;
+        } catch (Exception e) {
+            logger.error("failed to find match in db ", e);
             return -1;
         }
+    }
+
+    /** Odds API uses ISO-8601; DB stores the same — compare by calendar date only. */
+    private static String toDateOnly(String commenceTime) {
+        if (commenceTime == null || commenceTime.isBlank()) {
+            return null;
+        }
+        if (commenceTime.length() >= 10) {
+            return commenceTime.substring(0, 10);
+        }
+        return commenceTime;
     }
 }

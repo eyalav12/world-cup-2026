@@ -25,7 +25,7 @@ public interface MatchRepository extends JpaRepository<Match,Integer> {
     @Query(value = "select * from match where (match.home_team=?1 or match.away_team=?1) and match.status='TIMED' ", nativeQuery = true)
     List<Match> findUpcomingMatchesByTeamName(String teamName);
 
-    @Query(value = "select match.match_id from match where (home_team=?1 or away_team=?2) and match_date=?3",nativeQuery = true)
+    @Query(value = "select match.match_id from match where ((home_team=?1 and away_team=?2) or (home_team=?2 and away_team=?1)) and cast(match_date as date) = cast(?3 as date) limit 1", nativeQuery = true)
     Integer findMatchByCombinationOfTeamsAndDate(String homeTeam,String awayTeam,String date);
 
     @Query(value = "select * from match where ((home_team = ?1 and away_team = ?2) or (home_team = ?2 and away_team = ?1)) and status = 'TIMED' order by match_date asc limit 1", nativeQuery = true)
