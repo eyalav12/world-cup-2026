@@ -1,6 +1,6 @@
-# World Cup 2026
+# World Cup 2026 — AI Multi-Agent Tournament Hub
 
-A full-stack FIFA World Cup 2026 hub — fixtures, teams, standings, news, odds, and an AI assistant that answers in natural language by combining live tournament data.
+A full-stack FIFA World Cup 2026 hub with a **multi-agent AI assistant** — fixtures, teams, standings, news, odds, and natural-language chat that routes questions to specialist agents and combines live tournament data into one answer.
 
 ## Live site
 
@@ -64,7 +64,7 @@ The frontend talks to Spring Boot for tournament data and to the agent service f
 
 ### AI agents — `world-cup-agents`
 - **Python 3.11+**, **FastAPI**, **Uvicorn**
-- **LangChain** — tool-calling agents (`create_agent`)
+- **LangChain** — tool-calling specialist workers (matches, news, bets)
 - **LangGraph** — multi-agent router → matches / news / odds workers → synthesizer
 - **OpenAI** (GPT-4.1) for routing and answer synthesis
 - Session memory via LangGraph checkpointer (`thread_id`)
@@ -76,13 +76,19 @@ The frontend talks to Spring Boot for tournament data and to the agent service f
 - Polymarket — prediction market odds
 - Historical World Cup match data (PostgreSQL)
 
+## Docker
+
+The app is built and run with **Docker** throughout development and deployment. Each service has its own `Dockerfile`; the repo root includes **Docker Compose** files to run the full stack locally (`docker-compose.yml`) and on the VPS (`docker-compose.prod.yml`).
+
 ## Repository layout
 
 ```
 world-cup-2026/
-├── world-cup-web/      # Next.js frontend
-├── world-cup-server/   # Spring Boot API
-└── world-cup-agents/   # FastAPI + LangGraph agents
+├── docker-compose.yml           # Local stack
+├── docker-compose.prod.yml      # Production / VPS stack
+├── world-cup-web/               # Next.js frontend (+ Dockerfile)
+├── world-cup-server/            # Spring Boot API (+ Dockerfile)
+└── world-cup-agents/            # FastAPI + LangGraph agents (+ Dockerfile)
 ```
 
 Configuration secrets (API keys, DB passwords) live in local env files — see `.env.example` and `application-local.properties.example` in each service. Those real files are gitignored and are not part of the repo.
