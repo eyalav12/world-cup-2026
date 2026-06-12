@@ -15,6 +15,16 @@ export function formatMatchDateShort(match: MatchDto): string {
   }
 }
 
+/** Date only (yyyy-MM-dd), aligned with history_match_data display. */
+export function formatMatchCalendarDate(match: MatchDto): string {
+  try {
+    return format(parseMatchDate(match), "yyyy-MM-dd");
+  } catch {
+    const raw = match.matchDate.trim();
+    return raw.length >= 10 ? raw.slice(0, 10) : raw;
+  }
+}
+
 export function matchStatusLabel(status: string): string {
   switch (status) {
     case "TIMED":

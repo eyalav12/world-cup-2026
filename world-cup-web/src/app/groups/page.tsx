@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { TeamCrest } from "@/components/teams/team-crest";
 import { GroupsExplorer } from "@/components/groups/groups-explorer";
 import { ErrorBanner } from "@/components/ui/error-banner";
@@ -82,10 +83,13 @@ export default async function GroupsPage({ searchParams }: Props) {
 
       {groups.length > 0 ? (
         <div className="mt-10">
-          <GroupsExplorer
-            groups={groups}
-            initialGroup={selectedGroup ?? groups[0]}
-          />
+          <Suspense
+            fallback={
+              <p className="text-sm text-emerald-100/60">Loading group data…</p>
+            }
+          >
+            <GroupsExplorer groups={groups} />
+          </Suspense>
         </div>
       ) : null}
     </div>

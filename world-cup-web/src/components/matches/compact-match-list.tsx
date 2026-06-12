@@ -2,17 +2,21 @@ import { MatchKickoffTime } from "@/components/matches/match-kickoff-time";
 import Link from "next/link";
 import type { MatchDto } from "@/lib/api/types";
 import { TeamCrest } from "@/components/teams/team-crest";
+import { formatMatchCalendarDate } from "@/lib/matches";
 
 type Props = {
   matches: MatchDto[];
   linkToDetail?: boolean;
   emptyMessage?: string;
+  /** "datetime" shows kickoff in local TZ; "date" shows yyyy-MM-dd like history rows. */
+  dateFormat?: "datetime" | "date";
 };
 
 export function CompactMatchList({
   matches,
   linkToDetail = false,
   emptyMessage = "No matches found.",
+  dateFormat = "datetime",
 }: Props) {
   if (matches.length === 0) {
     return <p className="text-sm text-emerald-100/50">{emptyMessage}</p>;
@@ -33,7 +37,13 @@ export function CompactMatchList({
               <TeamCrest teamName={m.awayTeam} size={24} />
             </div>
             <div className="shrink-0 text-right text-xs text-emerald-100/50">
-              <MatchKickoffTime match={m} />
+              <div>
+                {dateFormat === "date" ? (
+                  formatMatchCalendarDate(m)
+                ) : (
+                  <MatchKickoffTime match={m} />
+                )}
+              </div>
               {m.competition ? (
                 <div className="truncate max-w-[10rem]">{m.competition}</div>
               ) : null}
