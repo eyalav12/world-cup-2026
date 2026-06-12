@@ -2,7 +2,7 @@ import type { AgentChatMessage } from "@/lib/agent/server";
 import { cn } from "@/lib/utils";
 
 const WELCOME =
-  "Welcome! Ask about World Cup 2026 — fixtures, group standings, head-to-head history, news, and lineups.";
+  "Hi! I'm your World Cup 2026 assistant. Ask about fixtures, teams, predictions, news, or odds.";
 
 type Props = {
   messages: AgentChatMessage[];

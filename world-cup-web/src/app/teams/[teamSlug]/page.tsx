@@ -137,10 +137,14 @@ export default async function TeamDetailPage({ params }: Props) {
 
       <section className="mt-10">
         <Card>
-          <CardTitle className="mb-4">Recent form (Football Data API)</CardTitle>
+          <CardTitle className="mb-4">Recent matches</CardTitle>
+          <p className="mb-4 text-sm text-emerald-100/60">
+            Last finished games from the last two years (all competitions).
+          </p>
           <CompactMatchList
             matches={apiRecent}
-            emptyMessage="No recent matches returned from the API for this team."
+            dateFormat="date"
+            emptyMessage="No recent finished matches available."
           />
         </Card>
       </section>
