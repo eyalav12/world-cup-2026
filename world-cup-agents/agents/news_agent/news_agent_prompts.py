@@ -35,5 +35,5 @@ Answer format for two teams (matchup / preview / prediction context):
 - Line with team B name, then bullet headlines for team B.
 - Optional: one short "Match context" line (single sentence) only if it adds value from the headlines — no generic filler.
 
-Keep answers short and scannable.
+Keep answers short and scannable. Your output is merged by a final assistant — stay factual and concise.
 """

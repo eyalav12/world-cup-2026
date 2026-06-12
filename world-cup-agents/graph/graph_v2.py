@@ -8,6 +8,7 @@ Multi-agent LangGraph v2 — router → workers (0–3) → synthesizer.
 from __future__ import annotations
 import os
 import re
+from datetime import date, timedelta
 from typing import Annotated, Literal
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -18,7 +19,7 @@ from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 from agents.bets_agent.bets_agent import invoke_bets_agent
-from agents.matches_agent.agent import invoke_agent_with_create_agent
+from agents.matches_agent.agent_v2 import invoke_agent_v2
 from agents.news_agent.news_agent import invoke_news_agent
 
 load_dotenv()
@@ -69,6 +70,7 @@ Workers:
 Rules:
 - Read the full conversation. Short follow-ups like "yes", "go ahead", "do it", "that one" mean continue the prior user request — inherit teams, dates, and intent from earlier turns.
 - Greetings only when there is no prior task (exact hi/hello/hey) → all run_* false, intent=general
+- today / yesterday / tomorrow / results / matches on a date → run_matches=true and set match_date (YYYY-MM-DD) from the reference date block
 - Host countries, tournament dates, schedule, when does it start, where is it → run_matches=true
 - prediction / preview / X vs Y → run_matches, run_news, run_odds all true unless user said "just odds", "news only", etc.
 - User asks for matches on a date AND news AND prediction/odds → run all three workers
@@ -77,21 +79,45 @@ Rules:
 - General World Cup questions with no need for live data → all run_* false, intent=general
 - Extract team_a, team_b, team_name, group_name, match_date from the conversation (including prior turns).
 - Dates like 11.6 or June 11 → match_date=2026-06-11
+- The tournament year is 2026. Never use 2024 or 2025 for World Cup match dates.
 """
 
 
-SYNTHESIZER_WITH_DATA_PROMPT = """You are the World Cup 2026 assistant.
+SYNTHESIZER_WITH_DATA_PROMPT = """You are the user's World Cup 2026 assistant.
 
-Combine the specialist summaries below into one clear reply. Use specialist data for fixtures, news, and odds.
-Do not invent scores, headlines, or prices that are not in the summaries."""
+Write a clear, concise reply. Answer what the user asked first.
+- Use ONLY facts from the specialist summaries below for scores, fixtures, news, and odds.
+- Do not invent data.
+- Keep answers short unless the user asked for a full list or deep preview.
+- Include only what they asked for (skip odds/news sections if irrelevant to the question).
+- Do not end with a menu of capabilities ("I can also help with news, odds…") unless they asked what you can do.
+- You may identify as their World Cup 2026 assistant briefly when natural — not every time."""
 
-SYNTHESIZER_GENERAL_PROMPT = """You are a helpful AI assistant for a World Cup 2026 app.
+SYNTHESIZER_GENERAL_PROMPT = """You are the user's World Cup 2026 assistant.
 
-You specialize in football / World Cup 2026 — hosts (USA, Canada, Mexico), tournament dates (June–July 2026), teams, fixtures, predictions, news, and odds. Use tools data when provided in the conversation.
+Answer briefly and clearly. You focus on FIFA World Cup 2026 (USA, Canada, Mexico; June–July 2026) but you may answer general questions too (trivia, small talk) with a short reply — no need to steer every answer back to the tournament.
 
-You can also answer general questions, creative requests (poems, jokes), and everyday chat using your normal knowledge and reasoning. Be friendly and concise.
+Do not invent live scores, news, or betting odds. If they need current tournament data, they should ask about fixtures, a team, or a specific match so you can look it up.
 
-Do not invent live match scores, news headlines, or betting odds unless specialist summaries were provided."""
+Do not append a long list of what you can help with."""
+
+def _reference_date() -> date:
+    return date.today()
+
+
+def _date_context_block() -> str:
+    today = _reference_date()
+    yesterday = today - timedelta(days=1)
+    tomorrow = today + timedelta(days=1)
+    return (
+        f"Reference dates for this session: "
+        f"today={today.isoformat()}, "
+        f"yesterday={yesterday.isoformat()}, "
+        f"tomorrow={tomorrow.isoformat()} "
+        f"({today.strftime('%A %B %d, %Y')}). "
+        f"Tournament: FIFA World Cup 2026 (June–July 2026)."
+    )
+
 
 def _plan(state: GraphState) -> Plan:
     return state.get("plan") or {}
@@ -125,7 +151,7 @@ def _has_prior_turns(state: GraphState) -> bool:
 def _build_worker_prompt(state: GraphState) -> str:
     plan = _plan(state)
     conv = _format_conversation(state)
-    lines: list[str] = []
+    lines: list[str] = [_date_context_block(), ""]
     if conv:
         lines.append(f"Conversation so far:\n{conv}")
         lines.append("")
@@ -168,6 +194,19 @@ def _is_greeting_only(user_query: str) -> bool:
     return q in {"hi", "hello", "hey", "yo", "hola"}
 
 
+def _is_capabilities_question(user_query: str) -> bool:
+    q = user_query.strip().lower()
+    return any(
+        phrase in q
+        for phrase in (
+            "what can you do",
+            "what do you do",
+            "how can you help",
+            "what are you",
+        )
+    )
+
+
 def _is_small_talk(user_query: str, *, has_history: bool) -> bool:
     """Only bare one-word greetings skip workers. 'hi how are you' uses the general LLM."""
     if has_history:
@@ -203,10 +242,20 @@ def _conversation_text(state: GraphState) -> str:
 
 
 def _normalize_match_date(text: str) -> str | None:
+    today = _reference_date()
+    if re.search(r"\btoday(?:'s)?\b", text, re.I):
+        return today.isoformat()
+    if re.search(r"\byesterday(?:'s)?\b", text, re.I):
+        return (today - timedelta(days=1)).isoformat()
+    if re.search(r"\btomorrow(?:'s)?\b", text, re.I):
+        return (today + timedelta(days=1)).isoformat()
     if re.search(r"\b11[\./]6\b|\bjune\s+11\b|\b11\s+june\b", text, re.I):
         return "2026-06-11"
-    if re.search(r"\b12[\./]6\b|\bjune\s+12\b", text, re.I):
+    if re.search(r"\b12[\./]6\b|\bjune\s+12\b|\b12\s+june\b", text, re.I):
         return "2026-06-12"
+    iso = re.search(r"\b(2026-\d{2}-\d{2})\b", text)
+    if iso:
+        return iso.group(1)
     return None
 
 
@@ -287,6 +336,16 @@ def _should_fetch_matches(user_query: str) -> bool:
         "standings",
         "match on",
         "games on",
+        "matches today",
+        "match today",
+        "games today",
+        "today",
+        "yesterday",
+        "tomorrow",
+        "results",
+        "score",
+        "live",
+        "played",
     )
     return any(k in q for k in keywords)
 
@@ -321,6 +380,16 @@ def run_router_plan_agent(state: GraphState) -> dict:
             }
         }
 
+    if _is_capabilities_question(user_query):
+        return {
+            "plan": {
+                "run_matches": False,
+                "run_news": False,
+                "run_odds": False,
+                "intent": "general",
+            }
+        }
+
     conv = _format_conversation(state)
     router_input = user_query
     if conv:
@@ -331,8 +400,9 @@ def run_router_plan_agent(state: GraphState) -> dict:
                 "and fill in teams/dates from earlier turns."
             )
 
+    router_system = f"{ROUTER_SYSTEM_PROMPT}\n\n{_date_context_block()}"
     plan_model: PlanModel = _llm.with_structured_output(PlanModel).invoke(
-        [SystemMessage(content=ROUTER_SYSTEM_PROMPT), HumanMessage(content=router_input)]
+        [SystemMessage(content=router_system), HumanMessage(content=router_input)]
     )
     plan: Plan = plan_model.model_dump()
     if _should_run_full_prediction(plan, state):
@@ -345,7 +415,7 @@ def run_router_plan_agent(state: GraphState) -> dict:
 def run_matches_agent(state: GraphState) -> dict:
     if not _plan(state).get("run_matches"):
         return {}
-    return {"matches_result": invoke_agent_with_create_agent(_build_worker_prompt(state))}
+    return {"matches_result": invoke_agent_v2(_build_worker_prompt(state))}
 
 def run_news_agent(state: GraphState) -> dict:
     if not _plan(state).get("run_news"):
@@ -365,24 +435,43 @@ def run_synthesizer_agent(state: GraphState) -> dict:
 
     if _is_small_talk(user_query, has_history=has_history):
         answer = (
-            "Hello! I'm your World Cup 2026 assistant. "
-            "Ask me about fixtures, match predictions, team news, or odds."
+            "Hi! I'm your World Cup 2026 assistant. "
+            "Ask about fixtures, teams, predictions, news, or odds."
+        )
+        return {"final_answer": answer, "messages": [AIMessage(content=answer)]}
+
+    if _is_capabilities_question(user_query):
+        answer = (
+            "I'm your World Cup 2026 assistant. I can look up fixtures and results, "
+            "team form and World Cup history, headlines, and betting odds. "
+            "Ask about a match, team, or date."
         )
         return {"final_answer": answer, "messages": [AIMessage(content=answer)]}
 
     ran_any = any(state.get(k) for k in ("matches_result", "news_result", "odds_result"))
 
     if ran_any:
-        body = f"Conversation:\n{conv or '(none)'}\n\nCurrent user message: {user_query}\nIntent: {plan.get('intent', 'general')}\n"
-        for title, key in [("Matches", "matches_result"), ("News", "news_result"), ("Odds", "odds_result")]:
-            body += f"\n--- {title} ---\n{state.get(key) or '(not run)'}\n"
+        body = (
+            f"{_date_context_block()}\n\n"
+            f"Conversation:\n{conv or '(none)'}\n\n"
+            f"Current user message: {user_query}\n"
+            f"Intent: {plan.get('intent', 'general')}\n"
+        )
+        if plan.get("run_matches") and state.get("matches_result"):
+            body += f"\n--- Matches ---\n{state['matches_result']}\n"
+        if plan.get("run_news") and state.get("news_result"):
+            body += f"\n--- News ---\n{state['news_result']}\n"
+        if plan.get("run_odds") and state.get("odds_result"):
+            body += f"\n--- Odds ---\n{state['odds_result']}\n"
         answer = _llm.invoke(
             [SystemMessage(content=SYNTHESIZER_WITH_DATA_PROMPT), HumanMessage(content=body)]
         ).content or ""
     else:
-        general_input = user_query
+        general_input = f"{_date_context_block()}\n\n"
         if conv:
-            general_input = f"Conversation so far:\n{conv}\n\nCurrent user message:\n{user_query}"
+            general_input += f"Conversation so far:\n{conv}\n\nCurrent user message:\n{user_query}"
+        else:
+            general_input += f"Current user message:\n{user_query}"
         answer = _llm.invoke(
             [
                 SystemMessage(content=SYNTHESIZER_GENERAL_PROMPT),

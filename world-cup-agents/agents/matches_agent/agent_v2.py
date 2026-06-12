@@ -2,7 +2,7 @@
 Enhanced agent — composite matchup tool + structured system prompt.
 
 Original agent remains in agents/agent.py (unchanged).
-Switch app endpoint to invoke_agent_v2 when ready.
+Switch app endpoint / graph to invoke_agent_v2 — wired in graph/graph_v2.py.
 """
 
 import os
