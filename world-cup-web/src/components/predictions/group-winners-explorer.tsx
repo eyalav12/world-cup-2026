@@ -53,7 +53,7 @@ export function GroupWinnersExplorer({ groups }: { groups: string[] }) {
       ) : null}
 
       {!isLoading && !isError ? (
-        <TournamentWinnerPanel data={data ?? null} limit={4} />
+        <TournamentWinnerPanel data={data} limit={4} />
       ) : null}
     </div>
   );

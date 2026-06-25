@@ -2,10 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { TeamCrest } from "@/components/teams/team-crest";
 import { GroupsExplorer } from "@/components/groups/groups-explorer";
-import { ErrorBanner } from "@/components/ui/error-banner";
-import { EmptyState } from "@/components/ui/empty-state";
 import { getTeamsByGroups } from "@/lib/api/endpoints";
-import { toUserMessage } from "@/lib/api/client";
 import { formatGroupId, sortGroupIds } from "@/lib/teams";
 import { slugifyTeamName } from "@/lib/utils";
 
@@ -15,15 +12,7 @@ type Props = { searchParams: Promise<{ group?: string }> };
 
 export default async function GroupsPage({ searchParams }: Props) {
   const { group: selectedGroup } = await searchParams;
-  let teamsByGroup: Record<string, string[]> = {};
-  let error: string | null = null;
-
-  try {
-    teamsByGroup = await getTeamsByGroups();
-  } catch (e) {
-    error = toUserMessage(e, "Could not load groups. Please try again later.");
-  }
-
+  const teamsByGroup = await getTeamsByGroups();
   const groups = sortGroupIds(Object.keys(teamsByGroup));
 
   return (
@@ -32,18 +21,6 @@ export default async function GroupsPage({ searchParams }: Props) {
       <p className="mt-2 text-emerald-100/70">
         Teams per group, standings, fixtures, and group winner markets.
       </p>
-
-      {error ? (
-        <div className="mt-6">
-          <ErrorBanner message={error} />
-        </div>
-      ) : null}
-
-      {groups.length === 0 && !error ? (
-        <div className="mt-8">
-          <EmptyState title="Groups not available yet" />
-        </div>
-      ) : null}
 
       <div className="mt-6 flex flex-wrap gap-2">
         {groups.map((g) => (
@@ -81,17 +58,15 @@ export default async function GroupsPage({ searchParams }: Props) {
         </section>
       ) : null}
 
-      {groups.length > 0 ? (
-        <div className="mt-10">
-          <Suspense
-            fallback={
-              <p className="text-sm text-emerald-100/60">Loading group data…</p>
-            }
-          >
-            <GroupsExplorer groups={groups} />
-          </Suspense>
-        </div>
-      ) : null}
+      <div className="mt-10">
+        <Suspense
+          fallback={
+            <p className="text-sm text-emerald-100/60">Loading group data…</p>
+          }
+        >
+          <GroupsExplorer groups={groups} />
+        </Suspense>
+      </div>
     </div>
   );
 }

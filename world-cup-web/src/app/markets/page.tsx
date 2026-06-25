@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MarketsExplorer } from "@/components/predictions/markets-explorer";
 import { getTeamsByGroups, getTopScorerOdds, getTournamentWinnerOdds } from "@/lib/api/endpoints";
-import { toUserMessage } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { sortGroupIds } from "@/lib/teams";
 
@@ -13,26 +13,20 @@ export default async function MarketsPage() {
   let groups: string[] = [];
   let error: string | null = null;
 
-  const [winnerResult, topScorerResult, teamsResult] = await Promise.allSettled([
-    getTournamentWinnerOdds(),
-    getTopScorerOdds(),
-    getTeamsByGroups(),
-  ]);
-
-  if (winnerResult.status === "fulfilled") {
-    winnerOdds = winnerResult.value;
-  } else {
-    error = toUserMessage(winnerResult.reason, "Could not load prediction markets.");
-  }
-
-  if (topScorerResult.status === "fulfilled") {
-    topScorerOdds = topScorerResult.value;
-  } else if (!error) {
-    error = toUserMessage(topScorerResult.reason, "Could not load prediction markets.");
-  }
-
-  if (teamsResult.status === "fulfilled") {
-    groups = sortGroupIds(Object.keys(teamsResult.value));
+  try {
+    const [winner, topScorer, teamsByGroup] = await Promise.all([
+      getTournamentWinnerOdds(),
+      getTopScorerOdds(),
+      getTeamsByGroups(),
+    ]);
+    winnerOdds = winner;
+    topScorerOdds = topScorer;
+    groups = sortGroupIds(Object.keys(teamsByGroup));
+  } catch (e) {
+    error =
+      e instanceof ApiError
+        ? e.message
+        : "Could not load prediction markets.";
   }
 
   return (

@@ -11,11 +11,10 @@ import {
   getMatchLineups,
   getOddsSummary,
 } from "@/lib/api/endpoints";
-import { toUserMessage } from "@/lib/api/client";
-import { MatchKickoffTime } from "@/components/matches/match-kickoff-time";
 import { MatchLineupsPanel } from "@/components/matches/match-lineups-panel";
 import { findMatchById } from "@/lib/match-lookup";
 import {
+  formatMatchDateTime,
   isFinishedMatch,
   isLiveMatch,
   matchStatusLabel,
@@ -40,37 +39,19 @@ export default async function MatchDetailPage({ params }: Props) {
   const match = await findMatchById(matchId);
   if (!match) notFound();
 
-  let odds: Awaited<ReturnType<typeof getOddsSummary>> = null;
+  let odds = null;
   let lineups: Awaited<ReturnType<typeof getMatchLineups>> = null;
   let h2h: Awaited<ReturnType<typeof getHeadToHead>> = [];
   let oddsError: string | null = null;
-  let detailsError: string | null = null;
 
-  const [oddsResult, lineupsResult, h2hResult] = await Promise.allSettled([
-    getOddsSummary(matchId),
-    getMatchLineups(matchId),
-    getHeadToHead(match.homeTeam, match.awayTeam),
-  ]);
-
-  if (oddsResult.status === "fulfilled") {
-    odds = oddsResult.value;
-  } else {
-    oddsError = toUserMessage(oddsResult.reason, "Could not load odds.");
-  }
-
-  if (lineupsResult.status === "fulfilled") {
-    lineups = lineupsResult.value;
-  } else {
-    detailsError = toUserMessage(lineupsResult.reason, "Could not load lineups.");
-  }
-
-  if (h2hResult.status === "fulfilled") {
-    h2h = h2hResult.value;
-  } else if (!detailsError) {
-    detailsError = toUserMessage(
-      h2hResult.reason,
-      "Could not load head-to-head history.",
-    );
+  try {
+    [odds, lineups, h2h] = await Promise.all([
+      getOddsSummary(matchId),
+      getMatchLineups(matchId),
+      getHeadToHead(match.homeTeam, match.awayTeam),
+    ]);
+  } catch (e) {
+    oddsError = e instanceof Error ? e.message : "Could not load match details.";
   }
 
   const live = isLiveMatch(match);
@@ -92,10 +73,9 @@ export default async function MatchDetailPage({ params }: Props) {
           >
             {matchStatusLabel(match.status)}
           </Badge>
-          <MatchKickoffTime
-            match={match}
-            className="text-sm text-emerald-100/60"
-          />
+          <span className="text-sm text-emerald-100/60">
+            {formatMatchDateTime(match)}
+          </span>
         </div>
 
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-center">
@@ -121,12 +101,6 @@ export default async function MatchDetailPage({ params }: Props) {
       {oddsError ? (
         <div className="mt-6">
           <ErrorBanner message={oddsError} />
-        </div>
-      ) : null}
-
-      {detailsError ? (
-        <div className="mt-6">
-          <ErrorBanner message={detailsError} />
         </div>
       ) : null}
 

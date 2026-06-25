@@ -1,9 +1,9 @@
-import { MatchKickoffTime } from "@/components/matches/match-kickoff-time";
 import Link from "next/link";
 import { TeamCrest } from "@/components/teams/team-crest";
 import { Badge } from "@/components/ui/badge";
 import type { MatchDto } from "@/lib/api/types";
 import {
+  formatMatchDateTime,
   isFinishedMatch,
   isLiveMatch,
   matchStatusLabel,
@@ -24,10 +24,9 @@ export function MatchCard({ match }: { match: MatchDto }) {
         >
           {matchStatusLabel(match.status)}
         </Badge>
-        <MatchKickoffTime
-          match={match}
-          className="text-xs text-emerald-100/50"
-        />
+        <span className="text-xs text-emerald-100/50">
+          {formatMatchDateTime(match)}
+        </span>
       </div>
 
       <div className="flex items-center justify-between gap-3">

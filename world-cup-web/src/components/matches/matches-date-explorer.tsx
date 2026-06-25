@@ -3,10 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { MatchCard } from "@/components/matches/match-card";
-import { toUserMessage } from "@/lib/api/client";
 import { getMatchesByDate } from "@/lib/api/endpoints";
-import { getBrowserTimeZone } from "@/lib/match-time";
-import { groupMatchesByDay } from "@/lib/matches";
+import { filterMatchesForTournamentDay } from "@/lib/matches";
 import {
   getDefaultMatchPickerDate,
   TOURNAMENT_START_ISO,
@@ -22,7 +20,8 @@ export function MatchesDateExplorer() {
     queryFn: () => getMatchesByDate(new Date(`${date}T12:00:00`)),
   });
 
-  const grouped = data ? groupMatchesByDay(data, getBrowserTimeZone()) : new Map();
+  // Order comes from the API (backend sorts by status, then kickoff time).
+  const dayMatches = data ? filterMatchesForTournamentDay(data, date) : [];
 
   return (
     <div>
@@ -38,13 +37,17 @@ export function MatchesDateExplorer() {
           className="w-full max-w-xs rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-white outline-none focus:border-emerald-400/50 sm:w-auto"
         />
       </label>
+      <p className="mb-4 text-xs text-emerald-100/45">
+        Dates and kickoff times shown in US Eastern (tournament time).
+      </p>
 
       {error ? (
         <ErrorBanner
-          message={toUserMessage(
-            error,
-            "Failed to load matches for this date.",
-          )}
+          message={
+            error instanceof Error
+              ? error.message
+              : "Failed to load matches for this date."
+          }
         />
       ) : null}
 
@@ -52,16 +55,16 @@ export function MatchesDateExplorer() {
         <p className="text-sm text-emerald-100/60">Loading matches…</p>
       ) : null}
 
-      {!isLoading && !error && data && data.length === 0 ? (
+      {!isLoading && !error && dayMatches.length === 0 ? (
         <EmptyState
           title="No matches on this day"
           description="Try another date during the tournament. Group stage begins 11 June 2026."
         />
       ) : null}
 
-      {grouped.size > 0 ? (
+      {dayMatches.length > 0 ? (
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {[...grouped.values()].flat().map((m) => (
+          {dayMatches.map((m) => (
             <MatchCard key={m.matchId} match={m} />
           ))}
         </div>

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
-import { MatchCard } from "@/components/matches/match-card";
+import { MatchStatusSections } from "@/components/matches/match-status-sections";
 import { GroupStandingsTable } from "@/components/groups/group-standings-table";
 import { TournamentWinnerPanel } from "@/components/predictions/tournament-winner-panel";
 import {
@@ -77,21 +77,17 @@ export function GroupsExplorer({ groups }: { groups: string[] }) {
 
       <section>
         <h2 className="mb-4 text-xl font-semibold text-white">
-          Upcoming matches — {formatGroupId(group)}
+          Matches — {formatGroupId(group)}
         </h2>
         {matchesPending ? (
           <p className="text-sm text-emerald-100/60">Loading…</p>
-        ) : null}
-        {!matchesPending && matches?.length === 0 ? (
-          <EmptyState title="No upcoming group matches" />
-        ) : null}
-        {!matchesPending && matches && matches.length > 0 ? (
-          <div key={group} className="grid gap-4 sm:grid-cols-2">
-            {matches.map((m) => (
-              <MatchCard key={m.matchId} match={m} />
-            ))}
-          </div>
-        ) : null}
+        ) : (
+          <MatchStatusSections
+            matches={matches ?? []}
+            groupUpcomingByDate
+            emptyTitle="No group matches yet"
+          />
+        )}
       </section>
     </div>
   );

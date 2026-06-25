@@ -6,9 +6,8 @@ import { TeamCrest } from "@/components/teams/team-crest";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getOddsSummary, getTopScorerOdds, getTournamentWinnerOdds } from "@/lib/api/endpoints";
-import { toUserMessage } from "@/lib/api/client";
-import { MatchKickoffTime } from "@/components/matches/match-kickoff-time";
-import { fetchUpcomingWindow } from "@/lib/matches";
+import { ApiError } from "@/lib/api/client";
+import { fetchUpcomingWindow, formatMatchDateTime } from "@/lib/matches";
 
 export const metadata = { title: "Odds" };
 
@@ -23,7 +22,10 @@ export default async function OddsPage() {
       getTopScorerOdds(),
     ]);
   } catch (e) {
-    winnerError = toUserMessage(e, "Could not load prediction market odds.");
+    winnerError =
+      e instanceof ApiError
+        ? e.message
+        : "Could not load prediction market odds.";
   }
 
   const upcoming = await fetchUpcomingWindow(7);
@@ -33,12 +35,12 @@ export default async function OddsPage() {
     featured.map(async (match) => {
       try {
         const odds = await getOddsSummary(match.matchId);
-        return { match, odds: odds ?? {}, error: null as string | null };
+        return { match, odds, error: null as string | null };
       } catch (e) {
         return {
           match,
           odds: {},
-          error: toUserMessage(e, "Failed to load odds for this match."),
+          error: e instanceof Error ? e.message : "Failed to load odds",
         };
       }
     }),
@@ -108,10 +110,9 @@ export default async function OddsPage() {
                   <TeamCrest teamName={match.awayTeam} size={36} />
                 </div>
                 <div className="text-right text-sm">
-                  <MatchKickoffTime
-                    match={match}
-                    className="text-emerald-100/60"
-                  />
+                  <p className="text-emerald-100/60">
+                    {formatMatchDateTime(match)}
+                  </p>
                   <Link
                     href={`/matches/${match.matchId}`}
                     className="text-emerald-400 hover:text-emerald-300"

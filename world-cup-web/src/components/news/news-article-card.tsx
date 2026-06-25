@@ -9,24 +9,21 @@ export function NewsArticleCard({
   compact?: boolean;
 }) {
   const sourceName = article.source?.name;
-  const imageClass = compact
-    ? "h-16 w-20 rounded-lg object-cover sm:h-20 sm:w-28"
-    : "h-20 w-24 rounded-xl object-cover sm:h-24 sm:w-32";
 
   return (
     <a
       href={article.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 transition hover:border-emerald-400/40 hover:bg-white/[0.08] sm:gap-4 sm:p-4"
+      className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-emerald-400/40 hover:bg-white/[0.08]"
     >
-      {article.urlToImage ? (
-        <div className="shrink-0">
+      {article.urlToImage && !compact ? (
+        <div className="hidden shrink-0 sm:block">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={article.urlToImage}
             alt=""
-            className={imageClass}
+            className="h-24 w-32 rounded-xl object-cover"
             loading="lazy"
           />
         </div>

@@ -31,9 +31,6 @@ export const viewport = {
   viewportFit: "cover" as const,
 };
 
-/** Fetch from Spring/FastAPI at request time (Docker build has no backend). */
-export const dynamic = "force-dynamic";
-
 export default function RootLayout({
   children,
 }: Readonly<{

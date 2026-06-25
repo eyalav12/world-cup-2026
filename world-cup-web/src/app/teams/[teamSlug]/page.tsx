@@ -29,38 +29,20 @@ export default async function TeamDetailPage({ params }: Props) {
   const teamName = teamNameFromSlug((await params).teamSlug);
   if (!teamName) notFound();
 
-  const [
-    squadResult,
-    upcomingResult,
-    historyResult,
-    apiRecentResult,
-    tournamentResultsResult,
-    teamPropsResult,
-  ] = await Promise.allSettled([
-    getTeamSquad(teamName),
-    getMatchesByTeamName(teamName),
-    getTeamLastMatches(teamName),
-    getTeamLastMatchesFromApi(teamName, 5),
-    getTeamTournamentResults(teamName, 6),
-    getTeamPolymarketProps(teamName),
-  ]);
+  const [squad, liveFixtures, upcomingFixtures, history, apiRecent, tournamentResults, teamProps] =
+    await Promise.all([
+      getTeamSquad(teamName),
+      getMatchesByTeamName(teamName, { status: "IN_PLAY" }).catch(() => []),
+      getMatchesByTeamName(teamName, { status: "TIMED" }).catch(() => []),
+      getTeamLastMatches(teamName),
+      getTeamLastMatchesFromApi(teamName, 5).catch(() => []),
+      getTeamTournamentResults(teamName, 6).catch(() => []),
+      getTeamPolymarketProps(teamName),
+    ]);
 
-  const squad =
-    squadResult.status === "fulfilled" ? squadResult.value : [];
-  const upcoming =
-    upcomingResult.status === "fulfilled" ? upcomingResult.value : [];
-  const history =
-    historyResult.status === "fulfilled" ? historyResult.value : [];
-  const apiRecent =
-    apiRecentResult.status === "fulfilled" ? apiRecentResult.value : [];
-  const tournamentResults =
-    tournamentResultsResult.status === "fulfilled"
-      ? tournamentResultsResult.value
-      : [];
-  const teamProps =
-    teamPropsResult.status === "fulfilled" ? teamPropsResult.value : null;
+  const liveAndUpcoming = [...liveFixtures, ...upcomingFixtures].slice(0, 5);
 
-  if (squad.length === 0 && upcoming.length === 0 && history.length === 0) {
+  if (squad.length === 0 && liveAndUpcoming.length === 0 && history.length === 0) {
     notFound();
   }
 
@@ -110,16 +92,35 @@ export default async function TeamDetailPage({ params }: Props) {
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-4 text-2xl font-semibold text-white">
-          Upcoming matches
-        </h2>
-        {upcoming.length === 0 ? (
+        <h2 className="mb-4 text-2xl font-semibold text-white">Fixtures</h2>
+        {liveFixtures.length === 0 && upcomingFixtures.length === 0 ? (
           <EmptyState title="No upcoming matches" />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {upcoming.map((m) => (
-              <MatchCard key={m.matchId} match={m} />
-            ))}
+          <div className="space-y-6">
+            {liveFixtures.length > 0 ? (
+              <div>
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-red-400">
+                  Live now
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {liveFixtures.map((m) => (
+                    <MatchCard key={m.matchId} match={m} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {upcomingFixtures.length > 0 ? (
+              <div>
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-400">
+                  Upcoming
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {upcomingFixtures.slice(0, 5).map((m) => (
+                    <MatchCard key={m.matchId} match={m} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </section>

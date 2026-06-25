@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { toUserMessage } from "@/lib/api/client";
 import { getGlobalLeaderboard } from "@/lib/api/endpoints";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorBanner } from "@/components/ui/error-banner";
@@ -27,7 +26,11 @@ export function LeaderboardTable() {
     <div>
       {error ? (
         <ErrorBanner
-          message={toUserMessage(error, "Could not load leaderboard.")}
+          message={
+            error instanceof Error
+              ? error.message
+              : "Could not load leaderboard."
+          }
         />
       ) : null}
 

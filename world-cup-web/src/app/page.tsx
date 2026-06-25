@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MatchCard } from "@/components/matches/match-card";
+import { CompactMatchList } from "@/components/matches/compact-match-list";
 import { TopScorerTeaser } from "@/components/predictions/top-scorer-panel";
 import { TournamentWinnerTeaser } from "@/components/predictions/tournament-winner-panel";
 import { ErrorBanner } from "@/components/ui/error-banner";
@@ -9,27 +10,37 @@ import {
   getTopScorerOdds,
   getTournamentWinnerOdds,
 } from "@/lib/api/endpoints";
-import { toUserMessage } from "@/lib/api/client";
-import { fetchUpcomingWindow } from "@/lib/matches";
+import { ApiError } from "@/lib/api/client";
+import { fetchHomeMatchSections } from "@/lib/matches";
 import { formatGroupId, sortGroupIds } from "@/lib/teams";
 
 export default async function HomePage() {
-  let matches = [] as Awaited<ReturnType<typeof fetchUpcomingWindow>>;
+  let live = [] as Awaited<ReturnType<typeof fetchHomeMatchSections>>["live"];
+  let upcoming = [] as Awaited<
+    ReturnType<typeof fetchHomeMatchSections>
+  >["upcoming"];
+  let justFinished = [] as Awaited<
+    ReturnType<typeof fetchHomeMatchSections>
+  >["justFinished"];
   let teamsByGroup: Record<string, string[]> = {};
   let winnerOdds: Awaited<ReturnType<typeof getTournamentWinnerOdds>> = null;
   let topScorerOdds: Awaited<ReturnType<typeof getTopScorerOdds>> = null;
   let apiError: string | null = null;
 
   try {
-    [matches, teamsByGroup] = await Promise.all([
-      fetchUpcomingWindow(10),
+    const [sections, groups] = await Promise.all([
+      fetchHomeMatchSections(10),
       getTeamsByGroups(),
     ]);
+    live = sections.live;
+    upcoming = sections.upcoming;
+    justFinished = sections.justFinished;
+    teamsByGroup = groups;
   } catch (e) {
-    apiError = toUserMessage(
-      e,
-      "We couldn't load tournament data right now. Please try again in a moment.",
-    );
+    apiError =
+      e instanceof ApiError
+        ? e.message
+        : "We couldn't load tournament data right now. Please try again in a moment.";
   }
 
   try {
@@ -82,8 +93,30 @@ export default async function HomePage() {
       <div className="mb-10 grid gap-4 sm:grid-cols-3">
         <Stat label="Groups" value={String(groups.length)} />
         <Stat label="Teams" value={String(teamCount)} />
-        <Stat label="Upcoming fixtures" value={String(matches.length)} />
+        <Stat
+          label="Fixtures ahead"
+          value={String(live.length + upcoming.length)}
+        />
       </div>
+
+      {live.length > 0 ? (
+        <section className="mb-12">
+          <div className="mb-4 flex items-end justify-between">
+            <h2 className="text-2xl font-semibold text-white">Live now</h2>
+            <Link
+              href="/matches"
+              className="text-sm text-emerald-400 hover:text-emerald-300"
+            >
+              All matches →
+            </Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {live.map((m) => (
+              <MatchCard key={m.matchId} match={m} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="mb-12">
         <div className="mb-4 flex items-end justify-between">
@@ -95,19 +128,34 @@ export default async function HomePage() {
             View all →
           </Link>
         </div>
-        {matches.length === 0 ? (
+        {upcoming.length === 0 ? (
           <EmptyState
             title="No upcoming matches"
             description="The tournament kicks off on 11 June 2026. Check back closer to the opening fixtures, or browse by date on the Matches page."
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {matches.slice(0, 6).map((m) => (
+            {upcoming.slice(0, 6).map((m) => (
               <MatchCard key={m.matchId} match={m} />
             ))}
           </div>
         )}
       </section>
+
+      {justFinished.length > 0 ? (
+        <section className="mb-12">
+          <div className="mb-4 flex items-end justify-between">
+            <h2 className="text-2xl font-semibold text-white">Just finished</h2>
+            <Link
+              href="/matches"
+              className="text-sm text-emerald-400 hover:text-emerald-300"
+            >
+              Browse by date →
+            </Link>
+          </div>
+          <CompactMatchList matches={justFinished} linkToDetail />
+        </section>
+      ) : null}
 
       {winnerOdds?.markets?.length || topScorerOdds?.markets?.length ? (
         <section className="mb-12">
