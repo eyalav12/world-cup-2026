@@ -19,7 +19,7 @@ public interface MatchRepository extends JpaRepository<Match,Integer> {
 
     @Query(value = "select match.odds_api_id,match.id,match.competition, match.match_id, match.away_team, match.home_team, " +
             "match.score, match.result, match.stage, match.status, match.match_date " +
-            "from match where CAST(match_date AS date) = CAST(:date AS date)", nativeQuery = true)
+            "from match where (match.match_date AT TIME ZONE 'America/New_York')::date = CAST(:date AS date)", nativeQuery = true)
     List<Match> findMatchesByDate(@Param("date") String date);
 
     @Query(value = "select * from match where (match.home_team=?1 or match.away_team=?1) and match.status='TIMED' ", nativeQuery = true)
@@ -34,7 +34,9 @@ public interface MatchRepository extends JpaRepository<Match,Integer> {
     @Query(value = "select * from match where ((home_team = ?1 or away_team = ?2) or (home_team = ?2 or away_team = ?1)) and cast(match_date as date) = cast(?3 as date) order by match_date asc limit 1", nativeQuery = true)
     Match findMatchByTeamNamesAndDate(String teamA, String teamB, String matchDate);
 
-    @Query(value = "select match.* from match left join team on match.away_team=team.team_name or match.home_team=team.team_name where group_id=?1",nativeQuery = true)
+    @Query(value = "select distinct match.* from match where match.match_id in (" +
+            "select distinct m.match_id from match m where m.home_team in (select team_name from team where group_id = ?1) " +
+            "or m.away_team in (select team_name from team where group_id = ?1))", nativeQuery = true)
     List<Match> findMatchesByGroupName(String groupName);
     Match findMatchByOddsApiId(String oddsApiId);
 

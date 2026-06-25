@@ -14,11 +14,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -33,12 +37,29 @@ public class MatchService {
     private final Integer NUMBER_OF_DAYS_AHEAD = 14;
     private final LocalDate TOURNAMENT_START_DATE = LocalDate.of(2026,06,11);
 
+    private static final Map<String, Integer> STATUS_SORT_ORDER = Map.of(
+            "IN_PLAY", 0,
+            "TIMED", 1,
+            "FINISHED", 2,
+            "POSTPONED", 3
+    );
+
     public MatchService(MatchRepository matchRepository, FootballDataApiUtil footballDataApiUtil, DateUtil dateUtil, MatchesCache matchesCache, RabbitMQProducer rabbitMQProducer){
         this.matchRepository = matchRepository;
         this.footballDataApiUtil = footballDataApiUtil;
         this.dateUtil = dateUtil;
         this.matchesCache = matchesCache;
         this.rabbitMQProducer = rabbitMQProducer;
+    }
+
+
+    @Scheduled(fixedRate = 1000*60)
+    public void liveMatchesFetchAndUpdateWS(){
+        LocalDate fromDate = LocalDate.now();
+        //fetch limit to 1 match date. games sorted by match date. calculate time between it and now. if its less than or more an hour- do calls
+        //convert the match date from string to format of now to calc it.
+        //call the api (not with live only, since we want to see over also).
+        //for each game that got- its a update- if a goal- can send to other web socket of notifications. if update - send, else no
     }
 
     @Scheduled(fixedRate = 1000*60*60*3)
@@ -114,7 +135,7 @@ public class MatchService {
         }
         try {
             List<MatchDto> matches = getMatchesByDateUncached(fromDate);
-            return filterByStatus(matches, status);
+            return sortMatchesByStatusAndTime(filterByStatus(matches, status));
         } catch (Exception e) {
             logger.error("failed to get matches from db or cache ", e.getMessage());
             return Collections.emptyList();
@@ -132,10 +153,12 @@ public class MatchService {
             logger.info("cache miss -------- data of matches is fetched from db");
             List<Match> matchesByDate = matchRepository.findMatchesByDate(fromDate.toString());
             matchesCache.putMatchesByDate(matchesByDate);
-            return matchesByDate.stream().map(MatchMapper::toDto).toList();
+            return sortMatchesByStatusAndTime(
+                    matchesByDate.stream().map(MatchMapper::toDto).toList()
+            );
         }
         logger.info("cache hit -------- data of matches is fetched from redis");
-        return cachedMatchesByDate;
+        return sortMatchesByStatusAndTime(cachedMatchesByDate);
     }
 
     public MatchDto getMatchByMatchId(Integer matchId) {
@@ -156,10 +179,12 @@ public class MatchService {
         try {
             List<MatchDto> cached = matchesCache.getRecentFinished(safeLimit);
             if (cached != null && !cached.isEmpty()) {
-                return cached;
+                return sortMatchesByStatusAndTime(cached);
             }
             List<Match> fromDb = matchRepository.findRecentFinishedMatches(safeLimit);
-            List<MatchDto> dtos = fromDb.stream().map(MatchMapper::toDto).toList();
+            List<MatchDto> dtos = sortMatchesByStatusAndTime(
+                    fromDb.stream().map(MatchMapper::toDto).toList()
+            );
             if (!dtos.isEmpty()) {
                 matchesCache.seedRecentFinished(dtos);
             }
@@ -174,7 +199,10 @@ public class MatchService {
         String effectiveStatus = (status == null || status.isBlank()) ? "TIMED" : status.trim();
         try {
             if ("TIMED".equalsIgnoreCase(effectiveStatus)) {
-                return applyLimit(getUpcomingMatchesByTeamName(teamName), limit);
+                return applyLimit(
+                        sortMatchesByStatusAndTime(getUpcomingMatchesByTeamName(teamName)),
+                        limit
+                );
             }
             List<Match> matches;
             if (limit != null && limit > 0) {
@@ -185,7 +213,9 @@ public class MatchService {
             if (matches == null || matches.isEmpty()) {
                 return Collections.emptyList();
             }
-            return matches.stream().map(MatchMapper::toDto).toList();
+            return sortMatchesByStatusAndTime(
+                    matches.stream().map(MatchMapper::toDto).toList()
+            );
         } catch (Exception e) {
             logger.error("error in get matches by team {} status {}", teamName, effectiveStatus, e);
             return Collections.emptyList();
@@ -196,7 +226,7 @@ public class MatchService {
         try {
             List<MatchDto> matches = getUpcomingMatchesByGroupName(groupName);
             List<MatchDto> filtered = filterByStatus(matches, status);
-            return applyLimit(filtered, limit);
+            return applyLimit(sortMatchesByStatusAndTime(filtered), limit);
         } catch (Exception e) {
             logger.error("failed to find matches by group name {}", groupName, e);
             return Collections.emptyList();
@@ -246,7 +276,9 @@ public class MatchService {
         try{
             List<Match> matchesByGroupName = matchRepository.findMatchesByGroupName(groupName);
             if(matchesByGroupName == null) return Collections.emptyList();
-            return matchesByGroupName.stream().map(MatchMapper::toDto).toList();
+            return sortMatchesByStatusAndTime(dedupeByMatchId(
+                    matchesByGroupName.stream().map(MatchMapper::toDto).toList()
+            ));
         }
         catch(Exception e){
             logger.error("failed to find matches by group name ",groupName,e);
@@ -260,16 +292,68 @@ public class MatchService {
             if(upcomingMatchesByTeamName == null || upcomingMatchesByTeamName.isEmpty()){
                 return Collections.emptyList();
             }
-            return upcomingMatchesByTeamName.stream().filter(upcomingMatchByTeamName->{
-                LocalDate now = LocalDate.now();
+            return upcomingMatchesByTeamName.stream().filter(upcomingMatchByTeamName -> {
+                LocalDate today = dateUtil.todayInTournamentZone();
                 String matchDate = upcomingMatchByTeamName.getMatchDate();
-                LocalDate localDate = dateUtil.parseInstantStringToLocalDate(matchDate);
-                return now.isBefore(localDate);
+                LocalDate kickoffDay = dateUtil.parseInstantStringToLocalDate(matchDate);
+                return !kickoffDay.isBefore(today);
             }).map(MatchMapper::toDto).toList();
         }
         catch (Exception e){
             logger.error("error in get upcoming matches ",teamName,e);
             return Collections.emptyList();
+        }
+    }
+
+
+    private List<MatchDto> dedupeByMatchId(List<MatchDto> matches) {
+        if (matches == null || matches.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<Integer, MatchDto> byId = new LinkedHashMap<>();
+        for (MatchDto match : matches) {
+            if (match.getMatchId() != null) {
+                byId.putIfAbsent(match.getMatchId(), match);
+            }
+        }
+        return new ArrayList<>(byId.values());
+    }
+
+    private int statusSortRank(String status) {
+        if (status == null) {
+            return 50;
+        }
+        return STATUS_SORT_ORDER.getOrDefault(status, 50);
+    }
+
+    private List<MatchDto> sortMatchesByStatusAndTime(List<MatchDto> matches) {
+        if (matches == null || matches.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<MatchDto> copy = new ArrayList<>(matches);
+        copy.sort((a, b) -> {
+            int statusCmp = Integer.compare(statusSortRank(a.getStatus()), statusSortRank(b.getStatus()));
+            if (statusCmp != 0) {
+                return statusCmp;
+            }
+            Instant ta = safeParseInstant(a.getMatchDate());
+            Instant tb = safeParseInstant(b.getMatchDate());
+            if ("FINISHED".equals(a.getStatus())) {
+                return tb.compareTo(ta);
+            }
+            return ta.compareTo(tb);
+        });
+        return copy;
+    }
+
+    private Instant safeParseInstant(String matchDate) {
+        if (matchDate == null || matchDate.isBlank()) {
+            return Instant.EPOCH;
+        }
+        try {
+            return dateUtil.parseInstant(matchDate);
+        } catch (Exception e) {
+            return Instant.EPOCH;
         }
     }
 
