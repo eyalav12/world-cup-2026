@@ -64,7 +64,8 @@ export function formatMatchCalendarDate(match: MatchDto): string {
   return getMatchTournamentDayKey(match);
 }
 
-export function formatTournamentDayLabel(dayKey: string): string {
+export function formatTournamentDayLabel(dayKey: string | null | undefined): string {
+  if (!dayKey) return "Date TBD";
   try {
     const [y, m, d] = dayKey.split("-").map(Number);
     const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
@@ -163,6 +164,10 @@ function dedupeMatches(matches: MatchDto[]): MatchDto[] {
   });
 }
 
+function isRenderableMatch(match: MatchDto): boolean {
+  return Boolean(match.homeTeam?.trim() && match.awayTeam?.trim());
+}
+
 export async function fetchMatchWindow(daysAhead = 14): Promise<MatchDto[]> {
   const { getMatchesByDate } = await import("./api/endpoints");
   const windowStart = getMatchWindowStart();
@@ -178,7 +183,7 @@ export async function fetchMatchWindow(daysAhead = 14): Promise<MatchDto[]> {
     }
   }
 
-  return dedupeMatches(all);
+  return dedupeMatches(all).filter(isRenderableMatch);
 }
 
 export async function fetchUpcomingWindow(daysAhead = 14): Promise<MatchDto[]> {

@@ -33,7 +33,7 @@ export function MatchCard({ match }: { match: MatchDto }) {
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <TeamCrest teamName={match.homeTeam} size={36} />
           <span className="truncate font-medium text-white">
-            {match.homeTeam}
+            {match.homeTeam ?? "TBD"}
           </span>
         </div>
         <div className="shrink-0 px-2 text-center">
@@ -47,14 +47,14 @@ export function MatchCard({ match }: { match: MatchDto }) {
         </div>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <span className="truncate text-right font-medium text-white">
-            {match.awayTeam}
+            {match.awayTeam ?? "TBD"}
           </span>
           <TeamCrest teamName={match.awayTeam} size={36} />
         </div>
       </div>
 
       <p className="mt-3 text-xs text-emerald-100/50">
-        {match.stage.replace(/_/g, " ")} · {match.competition}
+        {(match.stage ?? "Match").replace(/_/g, " ")} · {match.competition}
       </p>
     </Link>
   );

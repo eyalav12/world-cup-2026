@@ -28,11 +28,11 @@ export function CompactMatchList({
           <>
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <TeamCrest teamName={m.homeTeam} size={24} />
-              <span className="truncate text-white">{m.homeTeam}</span>
+              <span className="truncate text-white">{m.homeTeam ?? "TBD"}</span>
               <span className="shrink-0 font-semibold tabular-nums text-emerald-300">
                 {m.score?.replace("-", "–") ?? "–"}
               </span>
-              <span className="truncate text-white">{m.awayTeam}</span>
+              <span className="truncate text-white">{m.awayTeam ?? "TBD"}</span>
               <TeamCrest teamName={m.awayTeam} size={24} />
             </div>
             <div className="shrink-0 text-right text-xs text-emerald-100/50">
