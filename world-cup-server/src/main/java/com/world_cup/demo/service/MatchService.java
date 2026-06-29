@@ -75,9 +75,8 @@ public class MatchService {
         }
         LocalDate toDate = fromDate.plusDays(NUMBER_OF_DAYS_AHEAD);
         List<MatchDto> matchesInDatesRange = getMatchesByDateFromApi(fromDate, toDate);
-        //save to db all matches
         saveOrUpdateMatchesToDB(matchesInDatesRange);
-        //todo - save to redis cache layer the hot, most popular games- not sure what good design
+        matchesCache.refreshFromSyncedMatches(matchesInDatesRange);
     }
 
 

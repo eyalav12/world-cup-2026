@@ -40,5 +40,21 @@ public final class MatchMapper {
         existing.setScore(dto.getScore());
         existing.setResult(dto.getResult());
         existing.setStatus(dto.getStatus());
+        if (isNotBlank(dto.getHomeTeam())) {
+            existing.setHomeTeam(dto.getHomeTeam());
+        }
+        if (isNotBlank(dto.getAwayTeam())) {
+            existing.setAwayTeam(dto.getAwayTeam());
+        }
+        if (isNotBlank(dto.getMatchDate())) {
+            existing.setMatchDate(dto.getMatchDate());
+        }
+        if (isNotBlank(dto.getStage())) {
+            existing.setStage(dto.getStage());
+        }
+    }
+
+    private static boolean isNotBlank(String value) {
+        return value != null && !value.isBlank();
     }
 }
