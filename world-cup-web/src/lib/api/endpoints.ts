@@ -122,7 +122,7 @@ async function fetchNullable<T>(path: string, revalidate = 300): Promise<T | nul
 
   const res = await fetch(url, {
     headers: { Accept: "application/json" },
-    next: { revalidate },
+    cache: "no-store",
   });
 
   if (res.status === 204) return null;
@@ -209,7 +209,7 @@ async function fetchNullableOptional<T>(
 
   const res = await fetch(url, {
     headers: { Accept: "application/json" },
-    next: { revalidate },
+    cache: "no-store",
   });
 
   if (res.status === 204 || res.status === 404) return null;

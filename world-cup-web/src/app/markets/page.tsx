@@ -4,6 +4,10 @@ import { getTeamsByGroups, getTopScorerOdds, getTournamentWinnerOdds } from "@/l
 import { ApiError } from "@/lib/api/client";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { sortGroupIds } from "@/lib/teams";
+import {
+  filterTournamentOddsByTeams,
+  flattenTeamsFromGroups,
+} from "@/lib/predictions";
 
 export const metadata = { title: "Markets" };
 
@@ -19,7 +23,10 @@ export default async function MarketsPage() {
       getTopScorerOdds(),
       getTeamsByGroups(),
     ]);
-    winnerOdds = winner;
+    winnerOdds = filterTournamentOddsByTeams(
+      winner,
+      flattenTeamsFromGroups(teamsByGroup),
+    );
     topScorerOdds = topScorer;
     groups = sortGroupIds(Object.keys(teamsByGroup));
   } catch (e) {

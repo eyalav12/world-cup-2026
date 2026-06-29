@@ -12,6 +12,10 @@ import {
 } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import { fetchHomeMatchSections } from "@/lib/matches";
+import {
+  filterTournamentOddsByTeams,
+  flattenTeamsFromGroups,
+} from "@/lib/predictions";
 import { formatGroupId, sortGroupIds } from "@/lib/teams";
 
 export default async function HomePage() {
@@ -48,6 +52,10 @@ export default async function HomePage() {
       getTournamentWinnerOdds(),
       getTopScorerOdds(),
     ]);
+    const qualified = flattenTeamsFromGroups(teamsByGroup);
+    if (qualified.length) {
+      winnerOdds = filterTournamentOddsByTeams(winnerOdds, qualified);
+    }
   } catch {
     /* optional teaser — ignore */
   }

@@ -5,9 +5,13 @@ import { TopScorerPanel } from "@/components/predictions/top-scorer-panel";
 import { TeamCrest } from "@/components/teams/team-crest";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { EmptyState } from "@/components/ui/empty-state";
-import { getOddsSummary, getTopScorerOdds, getTournamentWinnerOdds } from "@/lib/api/endpoints";
+import { getOddsSummary, getTeamsByGroups, getTopScorerOdds, getTournamentWinnerOdds } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import { fetchUpcomingWindow, formatMatchDateTime } from "@/lib/matches";
+import {
+  filterTournamentOddsByTeams,
+  flattenTeamsFromGroups,
+} from "@/lib/predictions";
 
 export const metadata = { title: "Odds" };
 
@@ -17,10 +21,14 @@ export default async function OddsPage() {
   let winnerError: string | null = null;
 
   try {
-    [winnerOdds, topScorerOdds] = await Promise.all([
+    const [winner, topScorer, teamsByGroup] = await Promise.all([
       getTournamentWinnerOdds(),
       getTopScorerOdds(),
+      getTeamsByGroups(),
     ]);
+    const qualified = flattenTeamsFromGroups(teamsByGroup);
+    winnerOdds = filterTournamentOddsByTeams(winner, qualified);
+    topScorerOdds = topScorer;
   } catch (e) {
     winnerError =
       e instanceof ApiError

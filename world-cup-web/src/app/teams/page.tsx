@@ -8,6 +8,8 @@ import { slugifyTeamName } from "@/lib/utils";
 
 export const metadata = { title: "Teams" };
 
+export const dynamic = "force-dynamic";
+
 export default async function TeamsPage() {
   let teamsByGroup: Record<string, string[]> = {};
   let error: string | null = null;

@@ -20,6 +20,7 @@ export async function apiFetch<T>(
 
   const res = await fetch(url, {
     ...init,
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       ...init?.headers,

@@ -31,6 +31,9 @@ export const viewport = {
   viewportFit: "cover" as const,
 };
 
+/** Backend is only reachable at runtime in Docker, not during `next build`. */
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{
