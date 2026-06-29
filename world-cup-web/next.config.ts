@@ -4,6 +4,7 @@ const apiBase = process.env.API_BASE_URL ?? "http://localhost:8083";
 const agentBase = process.env.AGENT_API_URL ?? "http://localhost:8000";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "crests.football-data.org", pathname: "/**" },
