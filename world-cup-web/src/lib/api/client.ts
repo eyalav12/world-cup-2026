@@ -11,6 +11,20 @@ export class ApiError extends Error {
   }
 }
 
+/** Parse JSON body; returns null for 204 or empty responses. */
+export async function readJsonResponse<T>(res: Response): Promise<T | null> {
+  if (res.status === 204) return null;
+
+  const text = await res.text();
+  if (!text.trim()) return null;
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError("Invalid JSON response", res.status);
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit & { next?: { revalidate?: number } },
@@ -30,13 +44,18 @@ export async function apiFetch<T>(
   if (!res.ok) {
     let message = res.statusText;
     try {
-      const body = (await res.json()) as ApiErrorBody;
-      if (body.message) message = body.message;
-    } catch {
-      /* ignore */
+      const body = await readJsonResponse<ApiErrorBody>(res);
+      if (body?.message) message = body.message;
+    } catch (error) {
+      if (error instanceof ApiError) message = error.message;
     }
     throw new ApiError(message, res.status);
   }
 
-  return res.json() as Promise<T>;
+  const data = await readJsonResponse<T>(res);
+  if (data === null) {
+    throw new ApiError(res.statusText || "Empty response", res.status);
+  }
+
+  return data;
 }

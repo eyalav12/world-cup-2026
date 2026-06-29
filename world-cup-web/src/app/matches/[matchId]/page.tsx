@@ -39,19 +39,27 @@ export default async function MatchDetailPage({ params }: Props) {
   const match = await findMatchById(matchId);
   if (!match) notFound();
 
-  let odds = null;
+  let odds: Awaited<ReturnType<typeof getOddsSummary>> = {};
   let lineups: Awaited<ReturnType<typeof getMatchLineups>> = null;
   let h2h: Awaited<ReturnType<typeof getHeadToHead>> = [];
   let oddsError: string | null = null;
 
   try {
-    [odds, lineups, h2h] = await Promise.all([
-      getOddsSummary(matchId),
-      getMatchLineups(matchId),
-      getHeadToHead(match.homeTeam, match.awayTeam),
-    ]);
+    odds = await getOddsSummary(matchId);
   } catch (e) {
-    oddsError = e instanceof Error ? e.message : "Could not load match details.";
+    oddsError = e instanceof Error ? e.message : "Could not load odds.";
+  }
+
+  try {
+    lineups = await getMatchLineups(matchId);
+  } catch {
+    /* lineups optional */
+  }
+
+  try {
+    h2h = await getHeadToHead(match.homeTeam, match.awayTeam);
+  } catch {
+    /* h2h optional */
   }
 
   const live = isLiveMatch(match);
@@ -112,7 +120,7 @@ export default async function MatchDetailPage({ params }: Props) {
       <section className="mt-10">
         <h2 className="mb-4 text-2xl font-semibold text-white">Odds</h2>
         <OddsPanel
-          odds={odds ?? {}}
+          odds={odds}
           homeTeam={match.homeTeam}
           awayTeam={match.awayTeam}
         />

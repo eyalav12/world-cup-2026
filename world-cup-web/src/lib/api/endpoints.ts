@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { getApiBaseUrl } from "./config";
-import { apiFetch, ApiError } from "./client";
+import { apiFetch, ApiError, readJsonResponse } from "./client";
 import type {
   CleanedTournamentOdds,
   GroupStandingRow,
@@ -75,10 +75,11 @@ export function getMatchLineups(matchId: number) {
   );
 }
 
-export function getOddsSummary(matchId: number) {
-  return apiFetch<OddsSummaryDTO>(
+export async function getOddsSummary(matchId: number) {
+  const data = await fetchNullable<OddsSummaryDTO>(
     `/odds/oddsSummaryByMatchId?matchId=${matchId}`,
   );
+  return data ?? {};
 }
 
 export function getTeamLastMatches(teamName: string) {
@@ -116,7 +117,7 @@ export function getGlobalLeaderboard(page = 0, size = 20) {
 }
 
 /** Returns null when Redis cache is empty (backend 204). */
-async function fetchNullable<T>(path: string, revalidate = 300): Promise<T | null> {
+async function fetchNullable<T>(path: string, _revalidate = 300): Promise<T | null> {
   const base = getApiBaseUrl();
   const url = `${base}${path}`;
 
@@ -125,20 +126,18 @@ async function fetchNullable<T>(path: string, revalidate = 300): Promise<T | nul
     cache: "no-store",
   });
 
-  if (res.status === 204) return null;
-
   if (!res.ok) {
     let message = res.statusText;
     try {
-      const body = (await res.json()) as { message?: string };
-      if (body.message) message = body.message;
-    } catch {
-      /* ignore */
+      const body = await readJsonResponse<{ message?: string }>(res);
+      if (body?.message) message = body.message;
+    } catch (error) {
+      if (error instanceof ApiError) message = error.message;
     }
     throw new ApiError(message, res.status);
   }
 
-  return res.json() as Promise<T>;
+  return readJsonResponse<T>(res);
 }
 
 export function getGroupWinnerOdds(groupId: string) {
@@ -202,7 +201,7 @@ export function getTeamPolymarketProps(teamName: string) {
 
 async function fetchNullableOptional<T>(
   path: string,
-  revalidate = 300,
+  _revalidate = 300,
 ): Promise<T | null> {
   const base = getApiBaseUrl();
   const url = `${base}${path}`;
@@ -217,15 +216,15 @@ async function fetchNullableOptional<T>(
   if (!res.ok) {
     let message = res.statusText;
     try {
-      const body = (await res.json()) as { message?: string };
-      if (body.message) message = body.message;
-    } catch {
-      /* ignore */
+      const body = await readJsonResponse<{ message?: string }>(res);
+      if (body?.message) message = body.message;
+    } catch (error) {
+      if (error instanceof ApiError) message = error.message;
     }
     throw new ApiError(message, res.status);
   }
 
-  return res.json() as Promise<T>;
+  return readJsonResponse<T>(res);
 }
 
 /** Returns null when Redis cache is empty (backend 204). */
