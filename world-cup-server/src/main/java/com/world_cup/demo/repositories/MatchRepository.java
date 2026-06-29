@@ -31,7 +31,7 @@ public interface MatchRepository extends JpaRepository<Match,Integer> {
     @Query(value = "select * from match where ((home_team = ?1 and away_team = ?2) or (home_team = ?2 and away_team = ?1)) and status = 'TIMED' order by match_date asc limit 1", nativeQuery = true)
     Match findUpcomingMatchByTeamNames(String teamA, String teamB);
 
-    @Query(value = "select * from match where ((home_team = ?1 or away_team = ?2) or (home_team = ?2 or away_team = ?1)) and cast(match_date as date) = cast(?3 as date) order by match_date asc limit 1", nativeQuery = true)
+    @Query(value = "select * from match where ((home_team = ?1 and away_team = ?2) or (home_team = ?2 and away_team = ?1)) and (match_date::timestamptz AT TIME ZONE 'America/New_York')::date = cast(?3 as date) order by match_date asc limit 1", nativeQuery = true)
     Match findMatchByTeamNamesAndDate(String teamA, String teamB, String matchDate);
 
     @Query(value = "select distinct match.* from match where match.match_id in (" +

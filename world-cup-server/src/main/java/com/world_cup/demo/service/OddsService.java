@@ -4,8 +4,12 @@ import com.world_cup.demo.dto.OddsGridDTO;
 import com.world_cup.demo.dto.OddsSummaryDTO;
 import com.world_cup.demo.dto.SportsbookOdds;
 import com.world_cup.demo.entities.Match;
+import com.world_cup.demo.entities.Team;
 import com.world_cup.demo.repositories.MatchRepository;
+import com.world_cup.demo.repositories.TeamRepository;
 import com.world_cup.demo.service.cache.OddsCache;
+import com.world_cup.demo.util.DateUtil;
+import com.world_cup.demo.util.OddsTeamNameUtil;
 import com.world_cup.demo.util.apiUtils.OddsApiUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +23,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -26,15 +32,17 @@ public class OddsService {
 
     private OddsApiUtil oddsApiUtil;
     private MatchRepository matchRepository;
+    private TeamRepository teamRepository;
     private OddsCache oddsCache;
     private static final Logger logger = LoggerFactory.getLogger(OddsService.class);
 
     @Value("${oddsdata.api.token:}")
     private String oddsApiToken;
 
-    public OddsService(OddsApiUtil oddsApiUtil,MatchRepository matchRepository,OddsCache oddsCache){
+    public OddsService(OddsApiUtil oddsApiUtil, MatchRepository matchRepository, TeamRepository teamRepository, OddsCache oddsCache){
         this.oddsApiUtil = oddsApiUtil;
         this.matchRepository = matchRepository;
+        this.teamRepository = teamRepository;
         this.oddsCache = oddsCache;
     }
 
@@ -107,7 +115,10 @@ public class OddsService {
             String apiResponse = oddsApiUtil.httpCallToApi();
 
             // 1. Process data structures & execute math conversions
-            List<OddsSummaryDTO> processedSummaries = processAndPrepareOddsData(apiResponse);
+            Set<String> dbTeamNames = teamRepository.findAll().stream()
+                    .map(Team::getTeamName)
+                    .collect(Collectors.toSet());
+            List<OddsSummaryDTO> processedSummaries = processAndPrepareOddsData(apiResponse, dbTeamNames);
 
             if (processedSummaries.isEmpty()) {
                 logger.warn(
@@ -195,7 +206,7 @@ public class OddsService {
 
 
 
-    public List<OddsSummaryDTO> processAndPrepareOddsData(String apiResponse) {
+    public List<OddsSummaryDTO> processAndPrepareOddsData(String apiResponse, Set<String> dbTeamNames) {
         ObjectMapper objectMapper = new ObjectMapper();
         List<OddsSummaryDTO> generatedSummaries = new ArrayList<>();
 
@@ -205,8 +216,8 @@ public class OddsService {
 
             for (Map oddsMatchMap : fullMatchesOddsList) {
                 String uuid = (String) oddsMatchMap.get("id");
-                String homeTeam = (String) oddsMatchMap.get("home_team");
-                String awayTeam = (String) oddsMatchMap.get("away_team");
+                String homeTeam = OddsTeamNameUtil.normalize((String) oddsMatchMap.get("home_team"), dbTeamNames);
+                String awayTeam = OddsTeamNameUtil.normalize((String) oddsMatchMap.get("away_team"), dbTeamNames);
                 String time = (String) oddsMatchMap.get("commence_time");
 
                 Integer matchIdFromDb = findDbMatchIdByOddsApiId(uuid, homeTeam, awayTeam, time);
@@ -337,7 +348,7 @@ public class OddsService {
                 return matchByOddsApiId.getMatchId();
             }
 
-            String matchDate = toDateOnly(commenceTime);
+            String matchDate = DateUtil.toTournamentDateKey(commenceTime);
             if (matchDate == null) {
                 return -1;
             }
@@ -348,7 +359,7 @@ public class OddsService {
                 return match.getMatchId();
             }
 
-            logger.debug("No DB match for odds event {} vs {} on {}", homeTeam, awayTeam, matchDate);
+            logger.warn("No DB match for odds event {} vs {} on {} (tournament date)", homeTeam, awayTeam, matchDate);
             return -1;
         } catch (Exception e) {
             logger.error("failed to find match in db ", e);
@@ -356,14 +367,8 @@ public class OddsService {
         }
     }
 
-    /** Odds API uses ISO-8601; DB stores the same — compare by calendar date only. */
+    // kept for legacy callers in extractDate
     private static String toDateOnly(String commenceTime) {
-        if (commenceTime == null || commenceTime.isBlank()) {
-            return null;
-        }
-        if (commenceTime.length() >= 10) {
-            return commenceTime.substring(0, 10);
-        }
-        return commenceTime;
+        return DateUtil.toTournamentDateKey(commenceTime);
     }
 }
