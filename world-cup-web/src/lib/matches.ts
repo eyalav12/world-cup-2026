@@ -168,6 +168,37 @@ function isRenderableMatch(match: MatchDto): boolean {
   return Boolean(match.homeTeam?.trim() && match.awayTeam?.trim());
 }
 
+export function hasOddsData(odds: {
+  topSportsbooks?: unknown[];
+  marketAverage?: unknown;
+}): boolean {
+  return (odds.topSportsbooks?.length ?? 0) > 0 || Boolean(odds.marketAverage);
+}
+
+export async function loadOddsForMatches(matches: MatchDto[]) {
+  const { getOddsSummary } = await import("./api/endpoints");
+  return Promise.all(
+    matches.map(async (match) => {
+      try {
+        const odds = await getOddsSummary(match.matchId);
+        return { match, odds, error: null as string | null };
+      } catch (e) {
+        return {
+          match,
+          odds: {},
+          error: e instanceof Error ? e.message : "Failed to load odds",
+        };
+      }
+    }),
+  );
+}
+
+export async function fetchRecentFinishedForOdds(limit = 6): Promise<MatchDto[]> {
+  const { getRecentFinishedMatches } = await import("./api/endpoints");
+  const recent = (await getRecentFinishedMatches(limit).catch(() => null)) ?? [];
+  return recent.filter(isRenderableMatch);
+}
+
 export async function fetchMatchWindow(daysAhead = 14): Promise<MatchDto[]> {
   const { getMatchesByDate } = await import("./api/endpoints");
   const windowStart = getMatchWindowStart();

@@ -11,10 +11,13 @@ export function OddsPanel({
   odds,
   homeTeam,
   awayTeam,
+  closedLines = false,
 }: {
   odds: OddsSummaryDTO;
   homeTeam: string;
   awayTeam: string;
+  /** True for finished matches — shows last synced pre-kickoff lines. */
+  closedLines?: boolean;
 }) {
   const avg = odds.marketAverage;
   const books = odds.topSportsbooks ?? [];
@@ -22,17 +25,28 @@ export function OddsPanel({
   if (!avg && books.length === 0) {
     return (
       <EmptyState
-        title="Odds not available yet"
-        description="Betting lines for this match haven't been published yet. Check back closer to kickoff."
+        title={closedLines ? "Closing lines not saved" : "Odds not available yet"}
+        description={
+          closedLines
+            ? "We don't have stored bookmaker lines for this finished match. Lines are saved when synced before kickoff."
+            : "Betting lines for this match haven't been published yet. Check back closer to kickoff."
+        }
       />
     );
   }
 
   return (
     <div className="space-y-4">
+      {closedLines ? (
+        <p className="text-sm text-emerald-100/60">
+          Closing lines — last bookmaker snapshot before kickoff.
+        </p>
+      ) : null}
       {avg ? (
         <Card>
-          <CardTitle className="mb-3">Market average</CardTitle>
+          <CardTitle className="mb-3">
+            {closedLines ? "Closing market average" : "Market average"}
+          </CardTitle>
           <div className="grid grid-cols-3 gap-3 text-center text-sm">
             <div>
               <p className="text-emerald-100/60">{homeTeam}</p>

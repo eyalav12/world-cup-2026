@@ -118,11 +118,14 @@ export default async function MatchDetailPage({ params }: Props) {
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-4 text-2xl font-semibold text-white">Odds</h2>
+        <h2 className="mb-4 text-2xl font-semibold text-white">
+          {finished ? "Closing odds" : "Odds"}
+        </h2>
         <OddsPanel
           odds={odds}
           homeTeam={match.homeTeam}
           awayTeam={match.awayTeam}
+          closedLines={finished}
         />
       </section>
 
