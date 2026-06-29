@@ -4,9 +4,12 @@ import com.world_cup.demo.dto.OddsGridDTO;
 import com.world_cup.demo.dto.OddsSummaryDTO;
 import com.world_cup.demo.dto.SportsbookOdds;
 import com.world_cup.demo.entities.Match;
+import com.world_cup.demo.entities.MatchOddsSnapshot;
 import com.world_cup.demo.entities.Team;
+import com.world_cup.demo.repositories.MatchOddsRepository;
 import com.world_cup.demo.repositories.MatchRepository;
 import com.world_cup.demo.repositories.TeamRepository;
+import com.world_cup.demo.service.cache.CacheSerializer;
 import com.world_cup.demo.service.cache.OddsCache;
 import com.world_cup.demo.util.DateUtil;
 import com.world_cup.demo.util.OddsTeamNameUtil;
@@ -25,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.time.Instant;
 
 
 @Service
@@ -34,16 +38,26 @@ public class OddsService {
     private MatchRepository matchRepository;
     private TeamRepository teamRepository;
     private OddsCache oddsCache;
+    private MatchOddsRepository matchOddsRepository;
+    private CacheSerializer cacheSerializer;
     private static final Logger logger = LoggerFactory.getLogger(OddsService.class);
 
     @Value("${oddsdata.api.token:}")
     private String oddsApiToken;
 
-    public OddsService(OddsApiUtil oddsApiUtil, MatchRepository matchRepository, TeamRepository teamRepository, OddsCache oddsCache){
+    public OddsService(
+            OddsApiUtil oddsApiUtil,
+            MatchRepository matchRepository,
+            TeamRepository teamRepository,
+            OddsCache oddsCache,
+            MatchOddsRepository matchOddsRepository,
+            CacheSerializer cacheSerializer) {
         this.oddsApiUtil = oddsApiUtil;
         this.matchRepository = matchRepository;
         this.teamRepository = teamRepository;
         this.oddsCache = oddsCache;
+        this.matchOddsRepository = matchOddsRepository;
+        this.cacheSerializer = cacheSerializer;
     }
 
     public OddsSummaryDTO getOddsSummaryByTeamId(Integer matchId){
@@ -98,7 +112,42 @@ public class OddsService {
         if (cacheKeyMatchId == null) {
             return null;
         }
-        return oddsCache.getCacheOdds(cacheKeyMatchId.toString());
+        OddsSummaryDTO fromRedis = oddsCache.getCacheOdds(cacheKeyMatchId.toString());
+        if (fromRedis != null) {
+            return fromRedis;
+        }
+        return loadPersistedOddsSummary(cacheKeyMatchId);
+    }
+
+    private OddsSummaryDTO loadPersistedOddsSummary(Integer matchId) {
+        return matchOddsRepository.findById(matchId)
+                .map(row -> {
+                    try {
+                        OddsSummaryDTO summary = cacheSerializer.parseJson(
+                                row.getSummaryJson(), OddsSummaryDTO.class);
+                        if (summary != null) {
+                            logger.info("DB odds snapshot hit for football matchId: {}", matchId);
+                        }
+                        return summary;
+                    } catch (Exception e) {
+                        logger.error("Failed to read persisted odds for matchId: {}", matchId, e);
+                        return null;
+                    }
+                })
+                .orElse(null);
+    }
+
+    private void persistOddsSnapshot(OddsSummaryDTO summary) {
+        if (summary == null || summary.getMatchId() == null) {
+            return;
+        }
+        try {
+            String json = cacheSerializer.convertObjectToJsonString(summary);
+            matchOddsRepository.save(
+                    new MatchOddsSnapshot(summary.getMatchId(), json, Instant.now()));
+        } catch (Exception e) {
+            logger.error("Failed to persist odds snapshot for matchId: {}", summary.getMatchId(), e);
+        }
     }
 
 
@@ -156,6 +205,8 @@ public class OddsService {
                 // --- Layout B: Build analytical Object structure for Agent ---
                 // The summaryDto already contains the full analytical data object package.
                 oddsCache.cacheOdds(agentKey, new ObjectMapper().writeValueAsString(summaryDto));
+
+                persistOddsSnapshot(summaryDto);
 
                 logger.debug("Successfully saved cache splits for match sequence ID: {}", internalId);
 

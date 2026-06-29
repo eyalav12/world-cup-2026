@@ -23,4 +23,12 @@ public class CacheSerializer {
         ObjectMapper objectMapper = new ObjectMapper();
         return objectMapper.writeValueAsString(objectResponse);
     }
+
+    public <T> T parseJson(String json, Class<T> targetClass) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        ObjectMapper objectMapper = new ObjectMapper();
+        return objectMapper.readValue(json, targetClass);
+    }
 }
