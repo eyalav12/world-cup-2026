@@ -94,8 +94,50 @@ export function getTeamLastMatchesFromApi(teamName: string, limit = 5) {
   );
 }
 
-export function getTeamTournamentResults(teamName: string, limit = 6) {
-  return getMatchesByTeamName(teamName, { status: "FINISHED", limit });
+/** Finished 2026 WC games — Football API first, then DB fallback. */
+export async function getTeamTournamentResults(
+  teamName: string,
+  limit = 6,
+): Promise<MatchDto[]> {
+  const [fromApi, fromDb] = await Promise.all([
+    getTeamLastMatchesFromApi(teamName, 20).catch(() => [] as MatchDto[]),
+    getMatchesByTeamName(teamName, { status: "FINISHED", limit }).catch(
+      () => [] as MatchDto[],
+    ),
+  ]);
+
+  const wcFinished = fromApi.filter(
+    (m) =>
+      m.status === "FINISHED" &&
+      m.competition?.toLowerCase().includes("world cup"),
+  );
+
+  const seen = new Set<number>();
+  const merged: MatchDto[] = [];
+  for (const m of [...wcFinished, ...fromDb]) {
+    if (m.matchId == null || seen.has(m.matchId)) continue;
+    seen.add(m.matchId);
+    merged.push(m);
+  }
+  return merged.slice(0, limit);
+}
+
+/** Live + upcoming fixtures, with match-window fallback when byTeamName is empty. */
+export async function getTeamUpcomingFixtures(teamName: string): Promise<MatchDto[]> {
+  const [live, timed] = await Promise.all([
+    getMatchesByTeamName(teamName, { status: "IN_PLAY" }).catch(() => [] as MatchDto[]),
+    getMatchesByTeamName(teamName, { status: "TIMED" }).catch(() => [] as MatchDto[]),
+  ]);
+  const combined = [...live, ...timed];
+  if (combined.length > 0) return combined;
+
+  const { fetchMatchWindow } = await import("@/lib/matches");
+  const window = await fetchMatchWindow(21);
+  return window.filter(
+    (m) =>
+      (m.status === "TIMED" || m.status === "IN_PLAY") &&
+      (m.homeTeam === teamName || m.awayTeam === teamName),
+  );
 }
 
 export function getHeadToHead(teamA: string, teamB: string) {
@@ -125,6 +167,8 @@ async function fetchNullable<T>(path: string, _revalidate = 300): Promise<T | nu
     headers: { Accept: "application/json" },
     cache: "no-store",
   });
+
+  if (res.status === 204) return null;
 
   if (!res.ok) {
     let message = res.statusText;

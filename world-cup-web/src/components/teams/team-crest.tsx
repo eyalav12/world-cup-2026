@@ -7,15 +7,14 @@ export function TeamCrest({
   size = 40,
   className,
 }: {
-  teamName: string | null | undefined;
+  teamName: string;
   size?: number;
   className?: string;
 }) {
-  const name = teamName?.trim() || "TBD";
-  const src = getTeamImageUrl(name);
+  const src = getTeamImageUrl(teamName);
 
   if (!src) {
-    const initials = name
+    const initials = teamName
       .split(" ")
       .map((w) => w[0])
       .join("")
@@ -29,7 +28,7 @@ export function TeamCrest({
           className,
         )}
         style={{ width: size, height: size }}
-        title={name}
+        title={teamName}
       >
         {initials}
       </div>
@@ -39,7 +38,7 @@ export function TeamCrest({
   return (
     <Image
       src={src}
-      alt={`${name} crest`}
+      alt={`${teamName} crest`}
       width={size}
       height={size}
       className={cn("shrink-0 rounded-full object-cover", className)}

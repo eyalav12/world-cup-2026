@@ -1,9 +1,9 @@
 import Link from "next/link";
+import { MatchKickoffTime } from "@/components/matches/match-kickoff-time";
 import { TeamCrest } from "@/components/teams/team-crest";
 import { Badge } from "@/components/ui/badge";
 import type { MatchDto } from "@/lib/api/types";
 import {
-  formatMatchDateTime,
   isFinishedMatch,
   isLiveMatch,
   matchStatusLabel,
@@ -24,16 +24,17 @@ export function MatchCard({ match }: { match: MatchDto }) {
         >
           {matchStatusLabel(match.status)}
         </Badge>
-        <span className="text-xs text-emerald-100/50">
-          {formatMatchDateTime(match)}
-        </span>
+        <MatchKickoffTime
+          match={match}
+          className="text-xs text-emerald-100/50"
+        />
       </div>
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <TeamCrest teamName={match.homeTeam} size={36} />
           <span className="truncate font-medium text-white">
-            {match.homeTeam ?? "TBD"}
+            {match.homeTeam}
           </span>
         </div>
         <div className="shrink-0 px-2 text-center">
@@ -47,14 +48,14 @@ export function MatchCard({ match }: { match: MatchDto }) {
         </div>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <span className="truncate text-right font-medium text-white">
-            {match.awayTeam ?? "TBD"}
+            {match.awayTeam}
           </span>
           <TeamCrest teamName={match.awayTeam} size={36} />
         </div>
       </div>
 
       <p className="mt-3 text-xs text-emerald-100/50">
-        {(match.stage ?? "Match").replace(/_/g, " ")} · {match.competition}
+        {match.stage.replace(/_/g, " ")} · {match.competition}
       </p>
     </Link>
   );

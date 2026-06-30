@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { MatchDto } from "@/lib/api/types";
+import { MatchKickoffTime } from "@/components/matches/match-kickoff-time";
 import { TeamCrest } from "@/components/teams/team-crest";
-import { formatMatchCalendarDate, formatMatchDateTime } from "@/lib/matches";
+import { formatMatchCalendarDate } from "@/lib/matches";
 
 type Props = {
   matches: MatchDto[];
@@ -37,9 +38,11 @@ export function CompactMatchList({
             </div>
             <div className="shrink-0 text-right text-xs text-emerald-100/50">
               <div>
-                {dateFormat === "date"
-                  ? formatMatchCalendarDate(m)
-                  : formatMatchDateTime(m)}
+                {dateFormat === "date" ? (
+                  formatMatchCalendarDate(m)
+                ) : (
+                  <MatchKickoffTime match={m} />
+                )}
               </div>
               {m.competition ? (
                 <div className="truncate max-w-[10rem]">{m.competition}</div>

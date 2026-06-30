@@ -2,6 +2,7 @@ import Link from "next/link";
 import { OddsPanel } from "@/components/odds/odds-panel";
 import { TournamentWinnerPanel } from "@/components/predictions/tournament-winner-panel";
 import { TopScorerPanel } from "@/components/predictions/top-scorer-panel";
+import { MatchKickoffTime } from "@/components/matches/match-kickoff-time";
 import { TeamCrest } from "@/components/teams/team-crest";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,7 +12,6 @@ import type { MatchDto } from "@/lib/api/types";
 import {
   fetchRecentFinishedForOdds,
   fetchUpcomingWindow,
-  formatMatchDateTime,
   hasOddsData,
   loadOddsForMatches,
 } from "@/lib/matches";
@@ -44,7 +44,7 @@ function MatchOddsBlock({
           <TeamCrest teamName={match.awayTeam} size={36} />
         </div>
         <div className="text-right text-sm">
-          <p className="text-emerald-100/60">{formatMatchDateTime(match)}</p>
+          <MatchKickoffTime match={match} className="text-emerald-100/60" />
           <Link
             href={`/matches/${match.matchId}`}
             className="text-emerald-400 hover:text-emerald-300"

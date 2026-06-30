@@ -38,7 +38,7 @@ export function MatchesDateExplorer() {
         />
       </label>
       <p className="mb-4 text-xs text-emerald-100/45">
-        Dates and kickoff times shown in US Eastern (tournament time).
+        Kickoff times shown in your local timezone.
       </p>
 
       {error ? (

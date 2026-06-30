@@ -1,8 +1,28 @@
 import { parseISO } from "date-fns";
 
-/** IANA timezone from the browser (e.g. Asia/Jerusalem). Client-only. */
-export function getBrowserTimeZone(): string {
+/**
+ * Timezone used to display kickoffs in the UI.
+ * Override with NEXT_PUBLIC_DISPLAY_TIMEZONE (e.g. Asia/Jerusalem).
+ */
+export function getDisplayTimeZone(): string {
+  const override = process.env.NEXT_PUBLIC_DISPLAY_TIMEZONE?.trim();
+  if (override) return override;
+
+  if (typeof window === "undefined") return "UTC";
+
+  const langs = navigator.languages?.length
+    ? navigator.languages
+    : [navigator.language];
+  if (langs.some((l) => l.startsWith("he") || l.includes("-IL"))) {
+    return "Asia/Jerusalem";
+  }
+
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+/** @deprecated use getDisplayTimeZone */
+export function getBrowserTimeZone(): string {
+  return getDisplayTimeZone();
 }
 
 /** Calendar date yyyy-MM-dd for grouping fixtures in a given timezone. */
@@ -16,7 +36,7 @@ export function matchCalendarDayKey(iso: string, timeZone: string): string {
   }).format(date);
 }
 
-/** Format kickoff like "Thu, Jun 11 · 19:00" in the given IANA timezone. */
+/** Format kickoff like "Sun, Jun 29 · 23:30 GMT+3" in the given IANA timezone. */
 export function formatMatchDateTimeInZone(
   iso: string,
   timeZone: string,
@@ -31,6 +51,7 @@ export function formatMatchDateTimeInZone(
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
+      timeZoneName: "short",
     }).formatToParts(date);
 
     const pick = (type: Intl.DateTimeFormatPartTypes) =>
@@ -38,9 +59,15 @@ export function formatMatchDateTimeInZone(
 
     const hour = pick("hour").padStart(2, "0");
     const minute = pick("minute").padStart(2, "0");
+    const tz = pick("timeZoneName");
 
-    return `${pick("weekday")}, ${pick("month")} ${pick("day")} · ${hour}:${minute}`;
+    const base = `${pick("weekday")}, ${pick("month")} ${pick("day")} · ${hour}:${minute}`;
+    return tz ? `${base} ${tz}` : base;
   } catch {
     return iso;
   }
+}
+
+export function formatKickoffForDisplay(iso: string): string {
+  return formatMatchDateTimeInZone(iso, getDisplayTimeZone());
 }

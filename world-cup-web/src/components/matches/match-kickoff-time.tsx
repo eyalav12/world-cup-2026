@@ -1,29 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import type { MatchDto } from "@/lib/api/types";
-import {
-  formatMatchDateTimeInZone,
-  getBrowserTimeZone,
-} from "@/lib/match-time";
+import { formatKickoffForDisplay } from "@/lib/match-time";
 
 type Props = {
   match: MatchDto;
   className?: string;
 };
 
-/**
- * Formats kickoff in the visitor's local timezone.
- * Renders after mount so SSR (UTC) and browser stay in sync — no 19:00 vs 22:00 split.
- */
-export function MatchKickoffTime({ match, className }: Props) {
-  const [text, setText] = useState<string | null>(null);
+function subscribe() {
+  return () => {};
+}
 
-  useEffect(() => {
-    setText(
-      formatMatchDateTimeInZone(match.matchDate, getBrowserTimeZone()),
-    );
-  }, [match.matchDate]);
+/** Kickoff in local / configured timezone — not US Eastern tournament time. */
+export function MatchKickoffTime({ match, className }: Props) {
+  const text = useSyncExternalStore(
+    subscribe,
+    () => formatKickoffForDisplay(match.matchDate),
+    () => null,
+  );
 
   return (
     <span className={className} suppressHydrationWarning>

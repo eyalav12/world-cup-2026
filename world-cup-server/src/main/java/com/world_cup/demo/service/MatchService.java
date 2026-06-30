@@ -35,7 +35,10 @@ public class MatchService {
     private RabbitMQProducer rabbitMQProducer;
     private MatchesCache matchesCache;
     private final Integer NUMBER_OF_DAYS_AHEAD = 14;
-    private final LocalDate TOURNAMENT_START_DATE = LocalDate.of(2026,06,11);
+    private static final LocalDate TOURNAMENT_START_DATE = LocalDate.of(2026,06,11);
+    private static final LocalDate TOURNAMENT_END_DATE = LocalDate.of(2026,7,19);
+    /** Keep TIMED fixtures visible until status sync catches up after kickoff. */
+    private static final long UPCOMING_GRACE_SECONDS = 3 * 3600;
 
     private static final Map<String, Integer> STATUS_SORT_ORDER = Map.of(
             "IN_PLAY", 0,
@@ -77,6 +80,14 @@ public class MatchService {
         List<MatchDto> matchesInDatesRange = getMatchesByDateFromApi(fromDate, toDate);
         saveOrUpdateMatchesToDB(matchesInDatesRange);
         matchesCache.refreshFromSyncedMatches(matchesInDatesRange);
+    }
+
+    /** Loads the full tournament schedule (group stage through final). */
+    public void syncFullTournamentFromApi() {
+        List<MatchDto> matches = getMatchesByDateFromApi(TOURNAMENT_START_DATE, TOURNAMENT_END_DATE);
+        logger.info("Full tournament sync: {} matches from Football Data API", matches.size());
+        saveOrUpdateMatchesToDB(matches);
+        matchesCache.refreshFromSyncedMatches(matches);
     }
 
 
@@ -292,10 +303,12 @@ public class MatchService {
                 return Collections.emptyList();
             }
             return upcomingMatchesByTeamName.stream().filter(upcomingMatchByTeamName -> {
-                LocalDate today = dateUtil.todayInTournamentZone();
-                String matchDate = upcomingMatchByTeamName.getMatchDate();
-                LocalDate kickoffDay = dateUtil.parseInstantStringToLocalDate(matchDate);
-                return !kickoffDay.isBefore(today);
+                try {
+                    Instant kickoff = dateUtil.parseInstant(upcomingMatchByTeamName.getMatchDate());
+                    return kickoff.isAfter(Instant.now().minusSeconds(UPCOMING_GRACE_SECONDS));
+                } catch (Exception e) {
+                    return true;
+                }
             }).map(MatchMapper::toDto).toList();
         }
         catch (Exception e){

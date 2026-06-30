@@ -21,7 +21,8 @@ public class StartUpMatchSyncLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        logger.info("Syncing upcoming matches from Football Data API on startup …");
+        logger.info("Syncing full tournament schedule from Football Data API on startup …");
+        matchService.syncFullTournamentFromApi();
         matchService.syncUpcomingMatchesFromApi();
     }
 }

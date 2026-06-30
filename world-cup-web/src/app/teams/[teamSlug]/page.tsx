@@ -9,12 +9,12 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TeamPropCards } from "@/components/predictions/team-prop-cards";
 import {
-  getMatchesByTeamName,
   getTeamLastMatches,
   getTeamLastMatchesFromApi,
   getTeamPolymarketProps,
   getTeamSquad,
   getTeamTournamentResults,
+  getTeamUpcomingFixtures,
 } from "@/lib/api/endpoints";
 import { teamNameFromSlug } from "@/lib/utils";
 
@@ -29,18 +29,19 @@ export default async function TeamDetailPage({ params }: Props) {
   const teamName = teamNameFromSlug((await params).teamSlug);
   if (!teamName) notFound();
 
-  const [squad, liveFixtures, upcomingFixtures, history, apiRecent, tournamentResults, teamProps] =
+  const [squad, upcomingFixtures, history, apiRecent, tournamentResults, teamProps] =
     await Promise.all([
       getTeamSquad(teamName),
-      getMatchesByTeamName(teamName, { status: "IN_PLAY" }).catch(() => []),
-      getMatchesByTeamName(teamName, { status: "TIMED" }).catch(() => []),
+      getTeamUpcomingFixtures(teamName).catch(() => []),
       getTeamLastMatches(teamName),
       getTeamLastMatchesFromApi(teamName, 5).catch(() => []),
       getTeamTournamentResults(teamName, 6).catch(() => []),
       getTeamPolymarketProps(teamName),
     ]);
 
-  const liveAndUpcoming = [...liveFixtures, ...upcomingFixtures].slice(0, 5);
+  const liveFixtures = upcomingFixtures.filter((m) => m.status === "IN_PLAY");
+  const timedFixtures = upcomingFixtures.filter((m) => m.status === "TIMED");
+  const liveAndUpcoming = upcomingFixtures.slice(0, 5);
 
   if (squad.length === 0 && liveAndUpcoming.length === 0 && history.length === 0) {
     notFound();
@@ -93,7 +94,7 @@ export default async function TeamDetailPage({ params }: Props) {
 
       <section className="mt-10">
         <h2 className="mb-4 text-2xl font-semibold text-white">Fixtures</h2>
-        {liveFixtures.length === 0 && upcomingFixtures.length === 0 ? (
+        {liveFixtures.length === 0 && timedFixtures.length === 0 ? (
           <EmptyState title="No upcoming matches" />
         ) : (
           <div className="space-y-6">
@@ -109,13 +110,13 @@ export default async function TeamDetailPage({ params }: Props) {
                 </div>
               </div>
             ) : null}
-            {upcomingFixtures.length > 0 ? (
+            {timedFixtures.length > 0 ? (
               <div>
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-400">
                   Upcoming
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {upcomingFixtures.slice(0, 5).map((m) => (
+                  {timedFixtures.slice(0, 5).map((m) => (
                     <MatchCard key={m.matchId} match={m} />
                   ))}
                 </div>

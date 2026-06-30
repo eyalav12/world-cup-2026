@@ -11,10 +11,10 @@ import {
   getMatchLineups,
   getOddsSummary,
 } from "@/lib/api/endpoints";
+import { MatchKickoffTime } from "@/components/matches/match-kickoff-time";
 import { MatchLineupsPanel } from "@/components/matches/match-lineups-panel";
 import { findMatchById } from "@/lib/match-lookup";
 import {
-  formatMatchDateTime,
   isFinishedMatch,
   isLiveMatch,
   matchStatusLabel,
@@ -81,9 +81,7 @@ export default async function MatchDetailPage({ params }: Props) {
           >
             {matchStatusLabel(match.status)}
           </Badge>
-          <span className="text-sm text-emerald-100/60">
-            {formatMatchDateTime(match)}
-          </span>
+          <MatchKickoffTime match={match} className="text-sm text-emerald-100/60" />
         </div>
 
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-center">
